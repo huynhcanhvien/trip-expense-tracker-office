@@ -21,6 +21,8 @@ export async function addExpenseAction(
   const tripId = Number(formData.get("tripId"));
   const includedMemberIds = formData.getAll("included").map((v) => Number(v));
 
+  const photoPath = String(formData.get("photoPath") ?? "").trim() || null;
+
   try {
     await createExpense(
       {
@@ -30,6 +32,7 @@ export async function addExpenseAction(
         expenseDate: String(formData.get("expenseDate") ?? ""),
         payerMemberId: Number(formData.get("payerMemberId")),
         includedMemberIds,
+        photoPath,
       },
       Number(session.user.id),
     );

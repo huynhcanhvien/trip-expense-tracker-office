@@ -18,6 +18,7 @@ import ShareButton from "./ShareButton";
 import AddGhostForm from "./AddGhostForm";
 import ExpenseForm from "./ExpenseForm";
 import DeleteExpenseButton from "./DeleteExpenseButton";
+import AddFromPhoto from "./AddFromPhoto";
 
 // Trip detail page (T10): metadata + member list + share invite link.
 // Expenses + balances arrive in T13–T14; ghost adding in T12.
@@ -134,6 +135,14 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
                   <span className="expense-meta">
                     {e.expenseDate} · paid by {memberName.get(e.payerMemberId) ?? "—"} · split{" "}
                     {e.includedMemberIds.length}-way
+                    {e.photoPath && (
+                      <>
+                        {" · "}
+                        <a href={e.photoPath} target="_blank" rel="noreferrer">
+                          receipt
+                        </a>
+                      </>
+                    )}
                   </span>
                   {trip.status === "open" && canModify(e.payerMemberId) && (
                     <div className="expense-actions">
@@ -146,11 +155,21 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             </ul>
           )}
           {trip.status === "open" && (
-            <ExpenseForm
-              tripId={trip.id}
-              members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
-              today={today}
-            />
+            <>
+              <ExpenseForm
+                tripId={trip.id}
+                members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+                today={today}
+              />
+              <details className="photo-details">
+                <summary>Add from a receipt photo</summary>
+                <AddFromPhoto
+                  tripId={trip.id}
+                  members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+                  today={today}
+                />
+              </details>
+            </>
           )}
         </section>
       </main>

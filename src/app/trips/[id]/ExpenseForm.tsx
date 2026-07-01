@@ -23,16 +23,27 @@ export interface EditingExpense {
   includedMemberIds: number[];
 }
 
+// Prefill for the OCR review flow (add mode): fields filled, but payer is NOT
+// assumed (spec R4 — don't assume the uploader paid).
+export interface PrefillExpense {
+  description: string;
+  amount: string;
+  expenseDate: string;
+  photoPath: string;
+}
+
 export default function ExpenseForm({
   tripId,
   members,
   today,
   editing,
+  prefill,
 }: {
   tripId: number;
   members: MemberOption[];
   today: string;
   editing?: EditingExpense;
+  prefill?: PrefillExpense;
 }) {
   const isEdit = Boolean(editing);
   const [state, action, pending] = useActionState(
@@ -41,6 +52,9 @@ export default function ExpenseForm({
   );
   const formRef = useRef<HTMLFormElement>(null);
   const includedSet = new Set(editing?.includedMemberIds ?? members.map((m) => m.id));
+  const descDefault = editing?.description ?? prefill?.description ?? "";
+  const amountDefault = editing?.amount ?? prefill?.amount ?? "";
+  const dateDefault = editing?.expenseDate ?? prefill?.expenseDate ?? today;
 
   // Only the add form stays on the page; clear it after a successful add.
   useEffect(() => {
@@ -51,6 +65,7 @@ export default function ExpenseForm({
     <form ref={formRef} action={action} className="expense-form">
       <input type="hidden" name="tripId" value={tripId} />
       {editing && <input type="hidden" name="expenseId" value={editing.id} />}
+      {prefill && <input type="hidden" name="photoPath" value={prefill.photoPath} />}
 
       <label>
         Description
@@ -60,7 +75,7 @@ export default function ExpenseForm({
           required
           maxLength={200}
           placeholder="e.g. Dinner"
-          defaultValue={editing?.description ?? ""}
+          defaultValue={descDefault}
         />
       </label>
 
@@ -73,17 +88,12 @@ export default function ExpenseForm({
             required
             inputMode="decimal"
             placeholder="0.00"
-            defaultValue={editing?.amount ?? ""}
+            defaultValue={amountDefault}
           />
         </label>
         <label>
           Date
-          <input
-            type="date"
-            name="expenseDate"
-            required
-            defaultValue={editing?.expenseDate ?? today}
-          />
+          <input type="date" name="expenseDate" required defaultValue={dateDefault} />
         </label>
       </div>
 
