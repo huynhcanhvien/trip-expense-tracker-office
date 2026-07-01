@@ -301,7 +301,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T2 — Currency module
 - [x] T3 — Balance computation
 - [x] T4 — Database connection + schema + migrate
-- [ ] T5 — Auth.js (register / login / logout)
+- [x] T5 — Auth.js (register / login / logout)
 - [ ] T6 — Email verification (Mailpit)
 - [ ] T7 — Password reset
 - [ ] T8 — Create trip

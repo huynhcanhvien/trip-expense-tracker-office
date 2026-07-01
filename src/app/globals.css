@@ -47,3 +47,102 @@ a {
     color-scheme: dark;
   }
 }
+
+/* --- Minimal app + auth styles (T5) --- */
+a {
+  color: #2563eb;
+}
+
+.page,
+.auth-page {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 1.25rem 0;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.auth-form input {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #2563eb;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
+.form-success {
+  color: #16a34a;
+  font-size: 0.9rem;
+}
+
+.auth-links {
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.app-brand {
+  font-weight: 700;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.app-user {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.app-header button {
+  background: transparent;
+  color: #2563eb;
+  padding: 0.35rem 0.5rem;
+}
