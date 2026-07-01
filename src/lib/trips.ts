@@ -80,6 +80,49 @@ export async function createTrip(
   }
 }
 
+export interface TripListItem extends TripRow {
+  memberCount: number;
+}
+
+/** All trips the user is a member of, newest first, with member counts (scenario B). */
+export async function listTripsForUser(
+  userId: number,
+  client: Client = db(),
+): Promise<TripListItem[]> {
+  const res = await client.execute({
+    sql: `SELECT t.*,
+                 (SELECT COUNT(*) FROM trip_members m WHERE m.trip_id = t.id) AS member_count
+            FROM trips t
+            JOIN trip_members tm ON tm.trip_id = t.id
+           WHERE tm.user_id = ?
+           ORDER BY t.created_at DESC, t.id DESC`,
+    args: [userId],
+  });
+  return res.rows.map((r) => ({
+    id: Number(r.id),
+    name: String(r.name),
+    date_start: (r.date_start as string | null) ?? null,
+    date_end: (r.date_end as string | null) ?? null,
+    currency: r.currency as CurrencyCode,
+    creator_user_id: Number(r.creator_user_id),
+    status: r.status as "open" | "closed",
+    closed_at: (r.closed_at as string | null) ?? null,
+    created_at: String(r.created_at),
+    memberCount: Number(r.member_count),
+  }));
+}
+
+/** Human-readable date range for a trip, or null if no dates set. */
+export function formatTripDates(trip: {
+  date_start: string | null;
+  date_end: string | null;
+}): string | null {
+  if (trip.date_start && trip.date_end) return `${trip.date_start} → ${trip.date_end}`;
+  if (trip.date_start) return `from ${trip.date_start}`;
+  if (trip.date_end) return `until ${trip.date_end}`;
+  return null;
+}
+
 /** Fetch a trip only if the user is a member; otherwise null (don't leak existence). */
 export async function getTripForUser(
   tripId: number,

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getTripForUser } from "@/lib/trips";
+import { getTripForUser, formatTripDates } from "@/lib/trips";
 import { CURRENCY_META } from "@/lib/currency";
 import Header from "@/app/components/Header";
 
@@ -13,14 +13,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const trip = await getTripForUser(Number(id), Number(session.user.id));
   if (!trip) notFound();
 
-  const dateRange =
-    trip.date_start && trip.date_end
-      ? `${trip.date_start} → ${trip.date_end}`
-      : trip.date_start
-        ? `from ${trip.date_start}`
-        : trip.date_end
-          ? `until ${trip.date_end}`
-          : null;
+  const dateRange = formatTripDates(trip);
 
   return (
     <>
