@@ -300,7 +300,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T1 — Scaffold Next.js project
 - [x] T2 — Currency module
 - [x] T3 — Balance computation
-- [ ] T4 — Database connection + schema + migrate
+- [x] T4 — Database connection + schema + migrate
 - [ ] T5 — Auth.js (register / login / logout)
 - [ ] T6 — Email verification (Mailpit)
 - [ ] T7 — Password reset

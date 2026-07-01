@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# local libSQL fallback DB (dev/tests when TURSO_DATABASE_URL is unset)
+/local.db
+/local.db-*
+
 # local-dev photo storage (plan §4)
 /public/uploads/*
 !/public/uploads/.gitkeep
