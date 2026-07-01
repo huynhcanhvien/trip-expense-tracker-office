@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import Header from "@/app/components/Header";
 import { listTripsForUser, formatTripDates, type TripListItem } from "@/lib/trips";
 import { CURRENCY_META } from "@/lib/currency";
+import NewTripDialog from "./NewTripDialog";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -19,17 +20,13 @@ export default async function DashboardPage() {
       <main className="page">
         <div className="page-head">
           <h1>Your trips</h1>
-          <Link href="/dashboard/new">
-            <button type="button">New trip</button>
-          </Link>
+          <NewTripDialog />
         </div>
 
         {trips.length === 0 ? (
           <div className="empty-state">
             <p className="muted">You don&apos;t have any trips yet.</p>
-            <Link href="/dashboard/new">
-              <button type="button">Create new trip</button>
-            </Link>
+            <NewTripDialog label="Create new trip" />
           </div>
         ) : (
           <>

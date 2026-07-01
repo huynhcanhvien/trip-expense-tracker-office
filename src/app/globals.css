@@ -473,6 +473,56 @@ button:disabled {
   margin-top: 2rem;
 }
 
+/* --- New-trip modal dialog --- */
+.modal {
+  width: min(92vw, 26rem);
+  margin: auto; /* re-center: the global `* { margin: 0 }` reset removes the UA centering */
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.75rem;
+  background: var(--glass-strong);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px -20px rgba(80, 60, 160, 0.45);
+  color: var(--ink);
+}
+.modal::backdrop {
+  background: rgba(52, 48, 90, 0.28);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.modal[open] {
+  animation: modal-pop 0.16s ease-out;
+}
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close {
+  background: transparent;
+  color: var(--ink-soft);
+  box-shadow: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0.1rem 0.5rem;
+}
+.modal-close:hover {
+  background: rgba(124, 108, 240, 0.12);
+  transform: none;
+  box-shadow: none;
+}
+
 /* --- Receipt photo upload --- */
 .photo-details {
   margin-top: 1rem;
