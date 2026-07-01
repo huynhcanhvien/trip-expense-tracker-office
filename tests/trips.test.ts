@@ -101,7 +101,7 @@ describe("createTrip", () => {
     await seedUsers();
     await expect(
       // @ts-expect-error deliberately passing an unsupported currency
-      createTrip({ name: "Nope", currency: "CNY" }, creatorId, client),
+      createTrip({ name: "Nope", currency: "GBP" }, creatorId, client),
     ).rejects.toThrow(TripError);
   });
 });
@@ -126,7 +126,7 @@ describe("listTripsForUser", () => {
     const t1 = await createTrip({ name: "Mine A", currency: "USD" }, creatorId, client);
     await createTrip({ name: "Mine B", currency: "EUR" }, creatorId, client);
     // A trip the creator is NOT part of.
-    await createTrip({ name: "Not mine", currency: "GBP" }, outsiderId, client);
+    await createTrip({ name: "Not mine", currency: "CNY" }, outsiderId, client);
     // Add the outsider to trip 1 → member count 2.
     await client.execute({
       sql: "INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)",

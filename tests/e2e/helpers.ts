@@ -29,7 +29,7 @@ export async function seedVerifiedUser(prefix = "user"): Promise<SeededUser> {
 export async function seedTrip(
   creatorId: number,
   name: string,
-  currency: "USD" | "EUR" | "GBP" | "VND" | "JPY" = "USD",
+  currency: "USD" | "EUR" | "CNY" | "VND" | "JPY" | "KRW" = "USD",
 ): Promise<{ tripId: number; token: string }> {
   const tripId = await createTrip({ name, currency }, creatorId);
   const token = (await getInvitationToken(tripId))!;

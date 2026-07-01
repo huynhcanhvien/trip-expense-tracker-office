@@ -1,16 +1,17 @@
 // Currency helpers — plan §3.2, spec R6.
-// Fixed supported list: USD/EUR/GBP (2dp), VND/JPY (0dp). Fixed per trip for its lifetime.
+// Fixed supported list: USD/EUR/CNY (2dp), VND/JPY/KRW (0dp). Fixed per trip for its lifetime.
 import Big from "big.js";
 
-export type CurrencyCode = "USD" | "EUR" | "GBP" | "VND" | "JPY";
+export type CurrencyCode = "USD" | "EUR" | "CNY" | "VND" | "JPY" | "KRW";
 
 /** Decimal places + a display locale for each supported currency. */
 export const CURRENCY_META: Record<CurrencyCode, { dp: number; locale: string; label: string }> = {
   USD: { dp: 2, locale: "en-US", label: "US Dollar" },
   EUR: { dp: 2, locale: "en-IE", label: "Euro" },
-  GBP: { dp: 2, locale: "en-GB", label: "British Pound" },
+  CNY: { dp: 2, locale: "zh-CN", label: "Chinese Yuan" },
   VND: { dp: 0, locale: "vi-VN", label: "Vietnamese Đồng" },
   JPY: { dp: 0, locale: "ja-JP", label: "Japanese Yen" },
+  KRW: { dp: 0, locale: "ko-KR", label: "South Korean Won" },
 };
 
 export const SUPPORTED_CURRENCIES = Object.keys(CURRENCY_META) as CurrencyCode[];
@@ -19,7 +20,7 @@ export function isSupportedCurrency(value: string): value is CurrencyCode {
   return Object.prototype.hasOwnProperty.call(CURRENCY_META, value);
 }
 
-/** Decimal places for a currency (USD/EUR/GBP → 2, VND/JPY → 0). */
+/** Decimal places for a currency (USD/EUR/CNY → 2, VND/JPY/KRW → 0). */
 export function decimalPlaces(currency: CurrencyCode): number {
   return CURRENCY_META[currency].dp;
 }

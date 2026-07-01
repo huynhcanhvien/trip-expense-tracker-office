@@ -64,7 +64,7 @@ _What MUST the app do? Number them — you'll cite these later (R1, R2, ...)._
 - **R3.** Show a balance summary as net amount per person: `-$X` means "should pay", `+$X` means "should receive". No who-pays-whom suggestions.
 - **R4.** Capture an expense from a receipt photo. After OCR, the user is shown a review/edit screen pre-filled with the extracted amount, description, and date; the user must confirm or correct each field (and choose payer + included members) before saving (see Scenario C). The uploaded image is retained for the trip's lifetime and deleted when the trip is closed (see R9).
 - **R5.** Edit or delete an existing expense — permitted only for the original payer or the trip's creator.
-- **R6.** Create and manage trips. Each trip has a name (required), an optional date range, and a currency chosen at creation from a fixed supported list: **USD, EUR, GBP** (2 decimal places) and **VND, JPY** (0 decimal places). The currency is fixed for the trip's lifetime and applies to every expense within it.
+- **R6.** Create and manage trips. Each trip has a name (required), an optional date range, and a currency chosen at creation from a fixed supported list: **USD, EUR, CNY** (2 decimal places) and **VND, JPY, KRW** (0 decimal places). The currency is fixed for the trip's lifetime and applies to every expense within it.
 - **R7.** Persist accounts, trips, members, expenses, and receipt photos across sessions.
 - **R8.** Authenticate users via email + password. Email verification is required before a user can log in or accept a trip invitation.
 - **R9.** Trip creator can close (archive) a trip. **Closing is permanent and one-way** — closed trips cannot be re-opened. Closed trips are read-only and live in a separate archive section. Closing a trip deletes its receipt photos (see R4). If any member still has a non-zero balance, the app warns the creator before closing but does not block the action — the app never tracks real-world payment.
@@ -85,7 +85,7 @@ _What you are NOT building. This is the most important section — it stops scop
 - [ ] Audit log / change history
 - [ ] Removing or kicking members from a trip after they've been added (members stay for the life of the trip)
 - [ ] Single-use or expiring invitation links (one reusable link per trip)
-- [ ] Currencies outside the supported list of {USD, EUR, GBP, VND, JPY}
+- [ ] Currencies outside the supported list of {USD, EUR, CNY, VND, JPY, KRW}
 - [ ] Re-opening a closed trip (closure is one-way and permanent)
 - [ ] Editing a ghost member's name after creation, and removing/replacing ghosts
 

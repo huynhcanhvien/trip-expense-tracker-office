@@ -32,7 +32,7 @@ User
   id, email (unique), password_hash, email_verified_at?, created_at
 
 Trip
-  id, name, date_start?, date_end?, currency (enum: USD/EUR/GBP/VND/JPY),
+  id, name, date_start?, date_end?, currency (enum: USD/EUR/CNY/VND/JPY/KRW),
   creator_user_id (-> User), status (enum: open/closed),
   closed_at?, created_at
 
@@ -96,13 +96,13 @@ Compute on-demand from raw expenses; **don't cache balances**. Balance becomes a
 
 ### 3.2 Currency & rounding
 
-Per R6, every trip has one currency from {USD, EUR, GBP (2dp), VND, JPY (0dp)}.
+Per R6, every trip has one currency from {USD, EUR, CNY (2dp), VND, JPY, KRW (0dp)}.
 
 - **Library:** `big.js`. All money values flow through `Big` at the app layer. Arithmetic is `.plus()`, `.minus()`, `.div()`, `.times()`; comparisons are `.gt()`, `.lt()`, `.eq()`. Never use `+`, `-`, `*`, `/`, `==` on amounts.
 - **Storage:** amounts are TEXT decimal strings in Turso (e.g. `"12.34"`, `"500"`). On read, wrap with `new Big(row.amount)`; on write, store `big.toString()`.
 - **Splitting an expense's `amount` across N included members** — the `share_of(e, m)` helper used in §3.1:
   1. Sort `included(e)` by `member_id` ascending.
-  2. Look up `dp` = decimal places for the trip's currency (USD/EUR/GBP = 2, JPY/VND = 0).
+  2. Look up `dp` = decimal places for the trip's currency (USD/EUR/CNY = 2, JPY/VND/KRW = 0).
   3. For the first N-1 included members, their share = `Big(e.amount).div(N).round(dp, Big.roundDown)`.
   4. The Nth member (last by id) absorbs the rounding remainder: their share = `Big(e.amount).minus(sum of other shares)`.
   5. Guarantee: shares sum to `e.amount` exactly. The "remainder absorber" is always the highest-id included member, so re-running the algorithm yields identical results.

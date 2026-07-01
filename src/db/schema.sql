@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS trips (
   name            TEXT NOT NULL,
   date_start      TEXT,
   date_end        TEXT,
-  currency        TEXT NOT NULL CHECK (currency IN ('USD','EUR','GBP','VND','JPY')),
+  currency        TEXT NOT NULL CHECK (currency IN ('USD','EUR','CNY','VND','JPY','KRW')),
   creator_user_id INTEGER NOT NULL REFERENCES users(id),
   status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
   closed_at       TEXT,

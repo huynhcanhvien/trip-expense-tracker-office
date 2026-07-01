@@ -65,7 +65,7 @@ describe("schema.sql", () => {
     await expect(
       client.execute({
         sql: "INSERT INTO trips (name, currency, creator_user_id) VALUES (?, ?, ?)",
-        args: ["Bad", "CNY", uid],
+        args: ["Bad", "GBP", uid], // GBP is no longer supported
       }),
     ).rejects.toThrow();
   });

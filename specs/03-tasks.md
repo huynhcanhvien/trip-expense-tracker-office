@@ -34,7 +34,7 @@ Pure logic and infrastructure. No UI yet, no auth yet. Builds the safe core the 
 - **Satisfies:** R6, foundational for R2/R3
 - **Files:** `src/lib/currency.ts`, `tests/currency.test.ts`
 - **Implements §3.2 of the plan:**
-  - Currency enum + decimal-places lookup (`USD/EUR/GBP → 2`, `VND/JPY → 0`).
+  - Currency enum + decimal-places lookup (`USD/EUR/CNY → 2`, `VND/JPY/KRW → 0`).
   - `share_of(amount: Big, includedMembers: number[], dp: number): Map<memberId, Big>` — sorts ids ascending, gives first N-1 the floor share, last absorbs remainder.
   - `formatAmount(amount: Big, currency): string` using `Intl.NumberFormat`.
 - **Done when:**
@@ -114,7 +114,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 ### T8. Create a new trip (Scenario D)
 - **Satisfies:** R6, scenario D
 - **Files:** `src/app/dashboard/new/page.tsx` (or modal), trip-creation handler, `src/app/trips/[id]/page.tsx` (skeleton)
-- **Form fields:** name (required), date_start (optional), date_end (optional), currency (required, dropdown of {USD, EUR, GBP, VND, JPY}).
+- **Form fields:** name (required), date_start (optional), date_end (optional), currency (required, dropdown of {USD, EUR, CNY, VND, JPY, KRW}).
 - **On save:** create Trip row, create a TripMember row for the creator (with `user_id` set), generate the InvitationToken row, redirect to trip page.
 - **Done when:**
   - Logged-in user can fill the form, save, and lands on a trip page showing the trip's name + currency. No expenses yet.

@@ -20,12 +20,13 @@ function sumShares(map: Map<number, Big>): Big {
 }
 
 describe("decimalPlaces", () => {
-  it("is 2 for USD/EUR/GBP and 0 for VND/JPY", () => {
+  it("is 2 for USD/EUR/CNY and 0 for VND/JPY/KRW", () => {
     expect(decimalPlaces("USD")).toBe(2);
     expect(decimalPlaces("EUR")).toBe(2);
-    expect(decimalPlaces("GBP")).toBe(2);
+    expect(decimalPlaces("CNY")).toBe(2);
     expect(decimalPlaces("VND")).toBe(0);
     expect(decimalPlaces("JPY")).toBe(0);
+    expect(decimalPlaces("KRW")).toBe(0);
   });
 });
 
