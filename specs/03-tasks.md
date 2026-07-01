@@ -303,7 +303,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T4 — Database connection + schema + migrate
 - [x] T5 — Auth.js (register / login / logout)
 - [x] T6 — Email verification (console fallback; Mailpit adapter ready)
-- [ ] T7 — Password reset
+- [x] T7 — Password reset
 - [ ] T8 — Create trip
 - [ ] T9 — Dashboard listing
 - [ ] T10 — Trip page + share invite

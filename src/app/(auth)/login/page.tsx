@@ -4,9 +4,9 @@ import LoginForm from "./LoginForm";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; reset?: string }>;
 }) {
-  const { registered } = await searchParams;
+  const { registered, reset } = await searchParams;
 
   return (
     <main className="auth-page">
@@ -14,6 +14,11 @@ export default async function LoginPage({
       {registered && (
         <p role="status" className="form-success">
           Account created — check your email for a verification link, then log in.
+        </p>
+      )}
+      {reset && (
+        <p role="status" className="form-success">
+          Password updated — please log in with your new password.
         </p>
       )}
       <LoginForm />

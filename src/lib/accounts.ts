@@ -4,15 +4,18 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { Client } from "@libsql/client";
 import { db } from "./db";
+import { consumePasswordResetToken } from "./tokens";
 
 const BCRYPT_ROUNDS = 10;
 
 /** A user-facing error (safe to show in the UI). */
 export class AccountError extends Error {}
 
+export const passwordSchema = z.string().min(8, "Password must be at least 8 characters");
+
 export const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: passwordSchema,
 });
 
 export interface PublicUser {
@@ -85,4 +88,46 @@ export async function verifyCredentials(
     email: String(row.email),
     emailVerified: row.email_verified_at != null,
   };
+}
+
+/** Look up a user by email (normalized). Returns null if not found. */
+export async function getUserByEmail(
+  email: string,
+  client: Client = db(),
+): Promise<PublicUser | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  const res = await client.execute({
+    sql: "SELECT id, email FROM users WHERE email = ?",
+    args: [normalizedEmail],
+  });
+  const row = res.rows[0];
+  return row ? { id: Number(row.id), email: String(row.email) } : null;
+}
+
+/**
+ * Reset a password using a single-use token (spec R10). The new password is
+ * validated *before* the token is consumed, so an invalid password doesn't burn
+ * the link. Returns true on success, false if the token is invalid/already used.
+ * Throws AccountError for an invalid password.
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+  client: Client = db(),
+): Promise<boolean> {
+  const parsed = passwordSchema.safeParse(newPassword);
+  if (!parsed.success) {
+    throw new AccountError(parsed.error.issues[0]?.message ?? "Invalid password");
+  }
+
+  const userId = await consumePasswordResetToken(token, client);
+  if (userId === null) return false;
+
+  const hash = bcrypt.hashSync(parsed.data, BCRYPT_ROUNDS);
+  await client.execute({
+    sql: "UPDATE users SET password_hash = ? WHERE id = ?",
+    args: [hash, userId],
+  });
+  return true;
 }

@@ -50,3 +50,37 @@ export async function consumeEmailVerificationToken(
   });
   return userId;
 }
+
+// --- Password reset (spec R10) ---
+
+export async function createPasswordResetToken(
+  userId: number,
+  client: Client = db(),
+): Promise<string> {
+  const token = generateToken();
+  await client.execute({
+    sql: "INSERT INTO password_reset_tokens (user_id, token) VALUES (?, ?)",
+    args: [userId, token],
+  });
+  return token;
+}
+
+/**
+ * Atomically claim a password reset token. Single-use, same guard as
+ * verification tokens. Returns the user id on success, or null if the token is
+ * unknown or already used. (The caller updates the password.)
+ */
+export async function consumePasswordResetToken(
+  token: string,
+  client: Client = db(),
+): Promise<number | null> {
+  const claim = await client.execute({
+    sql: `UPDATE password_reset_tokens
+             SET used_at = datetime('now')
+           WHERE token = ? AND used_at IS NULL
+       RETURNING user_id`,
+    args: [token],
+  });
+  if (claim.rows.length === 0) return null;
+  return Number(claim.rows[0].user_id);
+}
