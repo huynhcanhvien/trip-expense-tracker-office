@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { SUPPORTED_CURRENCIES, type CurrencyCode } from "./currency";
 import { generateToken } from "./tokens";
+import { storage } from "./storage";
 
 /** A user-facing error (safe to show in the UI). */
 export class TripError extends Error {}
@@ -153,6 +154,48 @@ export async function getInvitationToken(
     args: [tripId],
   });
   return res.rows[0] ? String(res.rows[0].token) : null;
+}
+
+/**
+ * Close (archive) a trip — spec R9. Creator-only, permanent and one-way. Sets
+ * status='closed', deletes all receipt photos and nulls their photo_path. Never
+ * blocks on non-zero balances (the UI warns; the app never tracks real payment).
+ */
+export async function closeTrip(
+  tripId: number,
+  actingUserId: number,
+  client: Client = db(),
+): Promise<void> {
+  const trip = await getTripForUser(tripId, actingUserId, client);
+  if (!trip) throw new TripError("You're not a member of this trip");
+  if (trip.creator_user_id !== actingUserId) {
+    throw new TripError("Only the trip creator can close this trip");
+  }
+  if (trip.status === "closed") throw new TripError("This trip is already closed");
+
+  const photos = await client.execute({
+    sql: "SELECT photo_path FROM expenses WHERE trip_id = ? AND photo_path IS NOT NULL",
+    args: [tripId],
+  });
+
+  // Update the DB first so state is consistent even if a file delete fails.
+  const tx = await client.transaction("write");
+  try {
+    await tx.execute({ sql: "UPDATE expenses SET photo_path = NULL WHERE trip_id = ?", args: [tripId] });
+    await tx.execute({
+      sql: "UPDATE trips SET status = 'closed', closed_at = datetime('now') WHERE id = ?",
+      args: [tripId],
+    });
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback();
+    throw err;
+  }
+
+  // Best-effort deletion of the now-orphaned photo files (R4/R9).
+  for (const row of photos.rows) {
+    await storage.delete(String(row.photo_path));
+  }
 }
 
 /** Human-readable date range for a trip, or null if no dates set. */

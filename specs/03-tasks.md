@@ -314,7 +314,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T15 — Edit / delete expense
 - [x] T16 — Photo storage adapter (local)
 - [x] T17 — OCR + review flow (tesseract.js, not Claude API)
-- [ ] T18 — Close trip
+- [x] T18 — Close trip
 - [ ] T19 — R2 storage adapter
 - [ ] T20 — Resend email adapter
 - [ ] T21 — Amplify deploy

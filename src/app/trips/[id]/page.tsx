@@ -19,6 +19,7 @@ import AddGhostForm from "./AddGhostForm";
 import ExpenseForm from "./ExpenseForm";
 import DeleteExpenseButton from "./DeleteExpenseButton";
 import AddFromPhoto from "./AddFromPhoto";
+import CloseTripButton from "./CloseTripButton";
 
 // Trip detail page (T10): metadata + member list + share invite link.
 // Expenses + balances arrive in T13–T14; ghost adding in T12.
@@ -59,6 +60,8 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const balances = members
     .map((m) => ({ ...m, net: net.get(m.id) ?? new Big(0) }))
     .sort((a, b) => b.net.cmp(a.net));
+  const unsettledCount = balances.filter((b) => !b.net.eq(0)).length;
+  const isCreator = trip.creator_user_id === currentUserId;
 
   return (
     <>
@@ -172,6 +175,17 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
             </>
           )}
         </section>
+
+        {trip.status === "open" && isCreator && (
+          <section className="trip-section danger-zone">
+            <h2>Close trip</h2>
+            <p className="muted">
+              Archives the trip (read-only) and deletes its receipt photos. Permanent — a closed
+              trip can&apos;t be reopened.
+            </p>
+            <CloseTripButton tripId={trip.id} unsettledCount={unsettledCount} />
+          </section>
+        )}
       </main>
     </>
   );

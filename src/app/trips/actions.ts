@@ -8,6 +8,7 @@ import {
   getTripByInviteToken,
   addTripMember,
   addGhostMember,
+  closeTrip,
   TripError,
 } from "@/lib/trips";
 import type { CurrencyCode } from "@/lib/currency";
@@ -80,4 +81,16 @@ export async function addGhostAction(
 
   revalidatePath(`/trips/${tripId}`);
   return { ok: true };
+}
+
+/** Close (archive) a trip — creator only, one-way (spec R9). */
+export async function closeTripAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const tripId = Number(formData.get("tripId"));
+  await closeTrip(tripId, Number(session.user.id));
+
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
 }
