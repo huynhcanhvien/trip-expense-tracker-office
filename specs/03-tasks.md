@@ -312,7 +312,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T13 — Add expense form
 - [x] T14 — Balance summary on trip page
 - [x] T15 — Edit / delete expense
-- [ ] T16 — Photo storage adapter (local)
+- [x] T16 — Photo storage adapter (local)
 - [ ] T17 — OCR + review flow
 - [ ] T18 — Close trip
 - [ ] T19 — R2 storage adapter
