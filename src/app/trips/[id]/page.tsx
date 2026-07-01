@@ -6,11 +6,14 @@ import {
   listTripMembers,
   formatTripDates,
 } from "@/lib/trips";
-import { CURRENCY_META } from "@/lib/currency";
+import Big from "big.js";
+import { CURRENCY_META, formatAmount } from "@/lib/currency";
+import { getTripExpenses } from "@/lib/expenses";
 import { baseUrl } from "@/lib/urls";
 import Header from "@/app/components/Header";
 import ShareButton from "./ShareButton";
 import AddGhostForm from "./AddGhostForm";
+import AddExpenseForm from "./AddExpenseForm";
 
 // Trip detail page (T10): metadata + member list + share invite link.
 // Expenses + balances arrive in T13–T14; ghost adding in T12.
@@ -23,12 +26,15 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const trip = await getTripForUser(Number(id), currentUserId);
   if (!trip) notFound();
 
-  const [members, token] = await Promise.all([
+  const [members, token, expenses] = await Promise.all([
     listTripMembers(trip.id),
     getInvitationToken(trip.id),
+    getTripExpenses(trip.id),
   ]);
   const dateRange = formatTripDates(trip);
   const inviteUrl = token ? `${baseUrl()}/invite/${token}` : null;
+  const memberName = new Map(members.map((m) => [m.id, m.displayName]));
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -65,8 +71,34 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
         )}
 
         <section className="trip-section">
-          <h2>Expenses</h2>
-          <p className="muted">No expenses yet.</p>
+          <h2>Expenses ({expenses.length})</h2>
+          {expenses.length === 0 ? (
+            <p className="muted">No expenses yet.</p>
+          ) : (
+            <ul className="expense-list">
+              {expenses.map((e) => (
+                <li key={e.id} className="expense-row">
+                  <div className="expense-main">
+                    <span className="expense-desc">{e.description}</span>
+                    <span className="expense-amount">
+                      {formatAmount(new Big(e.amount), trip.currency)}
+                    </span>
+                  </div>
+                  <span className="expense-meta">
+                    {e.expenseDate} · paid by {memberName.get(e.payerMemberId) ?? "—"} · split{" "}
+                    {e.includedMemberIds.length}-way
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {trip.status === "open" && (
+            <AddExpenseForm
+              tripId={trip.id}
+              members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
+              today={today}
+            />
+          )}
         </section>
       </main>
     </>

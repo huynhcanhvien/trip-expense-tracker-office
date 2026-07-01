@@ -309,7 +309,7 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [x] T10 — Trip page + share invite
 - [x] T11 — Invitation preview + accept
 - [x] T12 — Add ghost members
-- [ ] T13 — Add expense form
+- [x] T13 — Add expense form
 - [ ] T14 — Balance summary on trip page
 - [ ] T15 — Edit / delete expense
 - [ ] T16 — Photo storage adapter (local)
