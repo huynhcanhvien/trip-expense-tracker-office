@@ -385,3 +385,21 @@ button:disabled {
 .balance-amount.zero {
   color: #64748b;
 }
+
+.expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.expense-actions a {
+  font-size: 0.85rem;
+}
+
+.link-danger {
+  background: transparent;
+  color: #dc2626;
+  padding: 0;
+  font-size: 0.85rem;
+}

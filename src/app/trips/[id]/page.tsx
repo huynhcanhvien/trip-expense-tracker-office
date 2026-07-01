@@ -12,10 +12,12 @@ import { decimalPlaces } from "@/lib/currency";
 import { getTripExpenses } from "@/lib/expenses";
 import { computeBalances } from "@/lib/balance";
 import { baseUrl } from "@/lib/urls";
+import Link from "next/link";
 import Header from "@/app/components/Header";
 import ShareButton from "./ShareButton";
 import AddGhostForm from "./AddGhostForm";
-import AddExpenseForm from "./AddExpenseForm";
+import ExpenseForm from "./ExpenseForm";
+import DeleteExpenseButton from "./DeleteExpenseButton";
 
 // Trip detail page (T10): metadata + member list + share invite link.
 // Expenses + balances arrive in T13–T14; ghost adding in T12.
@@ -36,7 +38,12 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const dateRange = formatTripDates(trip);
   const inviteUrl = token ? `${baseUrl()}/invite/${token}` : null;
   const memberName = new Map(members.map((m) => [m.id, m.displayName]));
+  const memberUserId = new Map(members.map((m) => [m.id, m.userId]));
   const today = new Date().toISOString().slice(0, 10);
+
+  // R5: payer (if registered) or trip creator may edit/delete.
+  const canModify = (payerMemberId: number) =>
+    trip.creator_user_id === currentUserId || memberUserId.get(payerMemberId) === currentUserId;
 
   // Net balance per member (R3), computed on demand from raw expenses.
   const net = computeBalances(
@@ -128,12 +135,18 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
                     {e.expenseDate} · paid by {memberName.get(e.payerMemberId) ?? "—"} · split{" "}
                     {e.includedMemberIds.length}-way
                   </span>
+                  {trip.status === "open" && canModify(e.payerMemberId) && (
+                    <div className="expense-actions">
+                      <Link href={`/trips/${trip.id}/expenses/${e.id}/edit`}>Edit</Link>
+                      <DeleteExpenseButton expenseId={e.id} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
           )}
           {trip.status === "open" && (
-            <AddExpenseForm
+            <ExpenseForm
               tripId={trip.id}
               members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
               today={today}

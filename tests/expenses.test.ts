@@ -3,7 +3,13 @@ import type { Client } from "@libsql/client";
 import { makeTestDb, type TestDb } from "./helpers/testDb";
 import { createUser } from "../src/lib/accounts";
 import { createTrip, addTripMember, listTripMembers } from "../src/lib/trips";
-import { createExpense, getTripExpenses, ExpenseError } from "../src/lib/expenses";
+import {
+  createExpense,
+  updateExpense,
+  deleteExpense,
+  getTripExpenses,
+  ExpenseError,
+} from "../src/lib/expenses";
 import { computeBalances } from "../src/lib/balance";
 import Big from "big.js";
 
@@ -12,6 +18,8 @@ let client: Client;
 
 // Members: Alice (creator), Bob, Carol — as trip_members.id
 let aliceUser: number;
+let bobUser: number;
+let carolUser: number;
 let tripId: number;
 let alice: number;
 let bob: number;
@@ -32,8 +40,8 @@ afterAll(() => testDb.cleanup());
 
 async function seedTrip(currency: "USD" | "JPY" = "USD") {
   aliceUser = (await createUser("alice@example.com", "password123", client)).id;
-  const bobUser = (await createUser("bob@example.com", "password123", client)).id;
-  const carolUser = (await createUser("carol@example.com", "password123", client)).id;
+  bobUser = (await createUser("bob@example.com", "password123", client)).id;
+  carolUser = (await createUser("carol@example.com", "password123", client)).id;
   tripId = await createTrip({ name: "Trip", currency }, aliceUser, client);
   await addTripMember(tripId, bobUser, client);
   await addTripMember(tripId, carolUser, client);
@@ -42,6 +50,14 @@ async function seedTrip(currency: "USD" | "JPY" = "USD") {
   alice = members.find((m) => m.userId === aliceUser)!.id;
   bob = members.find((m) => m.userId === bobUser)!.id;
   carol = members.find((m) => m.userId === carolUser)!.id;
+}
+
+async function makeExpense(payerMember = alice, included = [alice, bob, carol]) {
+  return createExpense(
+    { tripId, description: "Dinner", amount: "60", expenseDate: "2026-07-01", payerMemberId: payerMember, includedMemberIds: included },
+    aliceUser,
+    client,
+  );
 }
 
 describe("createExpense", () => {
@@ -220,5 +236,71 @@ describe("T14: balances wired from stored expenses (R3)", () => {
     let sum = new Big(0);
     for (const v of net.values()) sum = sum.plus(v);
     expect(sum.eq(0)).toBe(true);
+  });
+});
+
+describe("T15: edit/delete authz (R5)", () => {
+  it("the payer can edit their own expense", async () => {
+    await seedTrip();
+    // Bob pays; Bob edits.
+    const id = await makeExpense(bob, [alice, bob, carol]);
+    await updateExpense(
+      id,
+      { description: "Lunch", amount: "30", expenseDate: "2026-07-03", payerMemberId: bob, includedMemberIds: [bob, carol] },
+      bobUser,
+      client,
+    );
+    const list = await getTripExpenses(tripId, client);
+    expect(list[0]).toMatchObject({ description: "Lunch", amount: "30" });
+    expect(list[0].includedMemberIds.sort()).toEqual([bob, carol].sort());
+  });
+
+  it("the trip creator can edit anyone's expense", async () => {
+    await seedTrip();
+    const id = await makeExpense(bob, [alice, bob, carol]); // Bob paid
+    // Alice is the creator → allowed.
+    await updateExpense(
+      id,
+      { description: "Fixed", amount: "9", expenseDate: "2026-07-01", payerMemberId: bob, includedMemberIds: [alice] },
+      aliceUser,
+      client,
+    );
+    expect((await getTripExpenses(tripId, client))[0].description).toBe("Fixed");
+  });
+
+  it("a non-payer non-creator cannot edit or delete", async () => {
+    await seedTrip();
+    const id = await makeExpense(alice, [alice, bob, carol]); // Alice paid, Alice is creator
+    // Carol is neither payer nor creator.
+    await expect(
+      updateExpense(
+        id,
+        { description: "Hax", amount: "1", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice] },
+        carolUser,
+        client,
+      ),
+    ).rejects.toThrowError(/payer or the trip creator/i);
+    await expect(deleteExpense(id, carolUser, client)).rejects.toThrowError(
+      /payer or the trip creator/i,
+    );
+  });
+
+  it("delete removes the expense and its shares", async () => {
+    await seedTrip();
+    const id = await makeExpense();
+    await deleteExpense(id, aliceUser, client);
+    expect(await getTripExpenses(tripId, client)).toHaveLength(0);
+    const shares = await client.execute({
+      sql: "SELECT COUNT(*) c FROM expense_shares WHERE expense_id = ?",
+      args: [id],
+    });
+    expect(Number(shares.rows[0].c)).toBe(0);
+  });
+
+  it("cannot edit/delete on an archived trip", async () => {
+    await seedTrip();
+    const id = await makeExpense();
+    await client.execute({ sql: "UPDATE trips SET status='closed' WHERE id = ?", args: [tripId] });
+    await expect(deleteExpense(id, aliceUser, client)).rejects.toThrowError(/archived/i);
   });
 });
