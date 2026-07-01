@@ -8,7 +8,6 @@ import {
   updateExpense,
   deleteExpense,
   getTripExpenses,
-  ExpenseError,
 } from "../src/lib/expenses";
 import { computeBalances } from "../src/lib/balance";
 import Big from "big.js";

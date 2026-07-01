@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.env
-server/data/
-server/uploads/
-*.log
-.DS_Store
-Icon?

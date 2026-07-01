@@ -42,10 +42,6 @@ yarn-error.log*
 /public/uploads/*
 !/public/uploads/.gitkeep
 
-# retired prototype deps (kept for reference, not built)
-/legacy/node_modules
-/legacy/**/node_modules
-
 # playwright
 /test-results/
 /playwright-report/
@@ -62,3 +58,7 @@ next-env.d.ts
 /e2e.db
 /e2e.db-*
 /.e2e-uploads/
+
+# tesseract.js language model cache (downloaded at runtime)
+/eng.traineddata
+/*.traineddata

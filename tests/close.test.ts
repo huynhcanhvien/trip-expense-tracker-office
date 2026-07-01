@@ -11,7 +11,7 @@ process.env.UPLOADS_DIR = uploadsDir;
 const { storage } = await import("../src/lib/storage");
 const { makeTestDb } = await import("./helpers/testDb");
 const { createUser } = await import("../src/lib/accounts");
-const { createTrip, closeTrip, listTripsForUser, TripError } = await import("../src/lib/trips");
+const { createTrip, closeTrip, listTripsForUser } = await import("../src/lib/trips");
 const { createExpense, getTripExpenses } = await import("../src/lib/expenses");
 
 let testDb: { client: Client; cleanup: () => void };
