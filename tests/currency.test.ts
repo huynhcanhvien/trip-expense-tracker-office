@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import Big from "big.js";
-import { share_of, decimalPlaces, formatAmount, SUPPORTED_CURRENCIES } from "../src/lib/currency";
+import {
+  share_of,
+  decimalPlaces,
+  formatAmount,
+  formatSignedBalance,
+  SUPPORTED_CURRENCIES,
+} from "../src/lib/currency";
 
 /** Return shares as [id, string] pairs sorted by id, for easy assertions. */
 function sharesAsPairs(map: Map<number, Big>): [number, string][] {
@@ -96,5 +102,17 @@ describe("formatAmount", () => {
     for (const c of SUPPORTED_CURRENCIES) {
       expect(typeof formatAmount(new Big("1000"), c)).toBe("string");
     }
+  });
+});
+
+describe("formatSignedBalance", () => {
+  it("prefixes + for amounts owed to the member", () => {
+    expect(formatSignedBalance(new Big("40"), "USD")).toBe("+$40.00");
+  });
+  it("keeps the - for amounts the member owes", () => {
+    expect(formatSignedBalance(new Big("-20"), "USD")).toBe("-$20.00");
+  });
+  it("shows a plain zero when settled", () => {
+    expect(formatSignedBalance(new Big("0"), "USD")).toBe("$0.00");
   });
 });

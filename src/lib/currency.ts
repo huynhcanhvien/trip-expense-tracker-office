@@ -57,3 +57,12 @@ export function formatAmount(amount: Big, currency: CurrencyCode): string {
     Number(amount.toString()),
   );
 }
+
+/**
+ * Format a net balance with an explicit sign (spec R3): "+$X" = should receive,
+ * "-$X" = should pay, "$0" = settled. (Intl already prefixes "-" for negatives.)
+ */
+export function formatSignedBalance(amount: Big, currency: CurrencyCode): string {
+  if (amount.gt(0)) return `+${formatAmount(amount, currency)}`;
+  return formatAmount(amount, currency);
+}

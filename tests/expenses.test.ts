@@ -4,6 +4,8 @@ import { makeTestDb, type TestDb } from "./helpers/testDb";
 import { createUser } from "../src/lib/accounts";
 import { createTrip, addTripMember, listTripMembers } from "../src/lib/trips";
 import { createExpense, getTripExpenses, ExpenseError } from "../src/lib/expenses";
+import { computeBalances } from "../src/lib/balance";
+import Big from "big.js";
 
 let testDb: TestDb;
 let client: Client;
@@ -181,5 +183,42 @@ describe("getTripExpenses", () => {
     expect(list.find((e) => e.description === "Coffee")!.includedMemberIds.sort()).toEqual(
       [bob, carol].sort(),
     );
+  });
+});
+
+describe("T14: balances wired from stored expenses (R3)", () => {
+  it("Scenario A + G together → Alice +60, Bob -30, Carol -30, sum 0", async () => {
+    await seedTrip();
+    // A: $60 dinner split three ways (Alice paid).
+    await createExpense(
+      { tripId, description: "Dinner", amount: "60", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice, bob, carol] },
+      aliceUser,
+      client,
+    );
+    // G: $20 for Bob & Carol only (Alice paid, excluded).
+    await createExpense(
+      { tripId, description: "Coffee", amount: "20", expenseDate: "2026-07-02", payerMemberId: alice, includedMemberIds: [bob, carol] },
+      aliceUser,
+      client,
+    );
+
+    const expenses = await getTripExpenses(tripId, client);
+    const net = computeBalances(
+      expenses.map((e) => ({
+        payerMemberId: e.payerMemberId,
+        amount: new Big(e.amount),
+        includedMemberIds: e.includedMemberIds,
+      })),
+      [alice, bob, carol],
+      2,
+    );
+
+    expect(net.get(alice)!.toString()).toBe("60");
+    expect(net.get(bob)!.toString()).toBe("-30");
+    expect(net.get(carol)!.toString()).toBe("-30");
+
+    let sum = new Big(0);
+    for (const v of net.values()) sum = sum.plus(v);
+    expect(sum.eq(0)).toBe(true);
   });
 });

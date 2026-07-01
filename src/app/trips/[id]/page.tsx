@@ -7,8 +7,10 @@ import {
   formatTripDates,
 } from "@/lib/trips";
 import Big from "big.js";
-import { CURRENCY_META, formatAmount } from "@/lib/currency";
+import { CURRENCY_META, formatAmount, formatSignedBalance } from "@/lib/currency";
+import { decimalPlaces } from "@/lib/currency";
 import { getTripExpenses } from "@/lib/expenses";
+import { computeBalances } from "@/lib/balance";
 import { baseUrl } from "@/lib/urls";
 import Header from "@/app/components/Header";
 import ShareButton from "./ShareButton";
@@ -36,6 +38,20 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const memberName = new Map(members.map((m) => [m.id, m.displayName]));
   const today = new Date().toISOString().slice(0, 10);
 
+  // Net balance per member (R3), computed on demand from raw expenses.
+  const net = computeBalances(
+    expenses.map((e) => ({
+      payerMemberId: e.payerMemberId,
+      amount: new Big(e.amount),
+      includedMemberIds: e.includedMemberIds,
+    })),
+    members.map((m) => m.id),
+    decimalPlaces(trip.currency),
+  );
+  const balances = members
+    .map((m) => ({ ...m, net: net.get(m.id) ?? new Big(0) }))
+    .sort((a, b) => b.net.cmp(a.net));
+
   return (
     <>
       <Header email={session.user.email} />
@@ -46,6 +62,30 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
           {trip.status === "closed" && " · archived"}
         </p>
         {dateRange && <p className="muted">{dateRange}</p>}
+
+        <section className="trip-section">
+          <h2>Balances</h2>
+          {expenses.length === 0 ? (
+            <p className="muted">No balances yet — add an expense.</p>
+          ) : (
+            <ul className="balance-list">
+              {balances.map((b) => {
+                const sign = b.net.gt(0) ? "pos" : b.net.lt(0) ? "neg" : "zero";
+                return (
+                  <li key={b.id} className="balance-row">
+                    <span>
+                      {b.displayName}
+                      {b.isGhost && <span className="tag">guest</span>}
+                    </span>
+                    <span className={`balance-amount ${sign}`}>
+                      {formatSignedBalance(b.net, trip.currency)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
         <section className="trip-section">
           <h2>Members ({members.length})</h2>
