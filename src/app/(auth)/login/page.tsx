@@ -4,9 +4,12 @@ import LoginForm from "./LoginForm";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string; reset?: string }>;
+  searchParams: Promise<{ registered?: string; reset?: string; callbackUrl?: string }>;
 }) {
-  const { registered, reset } = await searchParams;
+  const { registered, reset, callbackUrl } = await searchParams;
+  const registerHref = callbackUrl
+    ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : "/register";
 
   return (
     <main className="auth-page">
@@ -21,11 +24,11 @@ export default async function LoginPage({
           Password updated — please log in with your new password.
         </p>
       )}
-      <LoginForm />
+      <LoginForm callbackUrl={callbackUrl} />
       <p className="auth-links">
         <Link href="/forgot">Forgot password?</Link>
         {" · "}
-        <Link href="/register">Create an account</Link>
+        <Link href={registerHref}>Create an account</Link>
       </p>
     </main>
   );

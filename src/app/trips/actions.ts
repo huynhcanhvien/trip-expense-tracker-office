@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { createTrip, TripError } from "@/lib/trips";
+import {
+  createTrip,
+  getTripByInviteToken,
+  addTripMember,
+  TripError,
+} from "@/lib/trips";
 import type { CurrencyCode } from "@/lib/currency";
 
 export interface TripFormState {
@@ -31,4 +36,23 @@ export async function createTripAction(
   }
 
   redirect(`/trips/${tripId}`);
+}
+
+/** Accept a trip invitation (scenario F). Adds the current user, then goes to the trip. */
+export async function acceptInviteAction(formData: FormData): Promise<void> {
+  const token = String(formData.get("token") ?? "");
+
+  const session = await auth();
+  if (!session?.user) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`);
+  }
+
+  const trip = await getTripByInviteToken(token);
+  if (!trip || trip.status === "closed") {
+    // Token vanished or trip closed between preview and accept.
+    redirect(`/invite/${token}`);
+  }
+
+  await addTripMember(trip.id, Number(session.user.id));
+  redirect(`/trips/${trip.id}`);
 }

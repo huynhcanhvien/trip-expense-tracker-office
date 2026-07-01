@@ -5,11 +5,12 @@ import { registerAction, type FormState } from "../actions";
 
 const initial: FormState = {};
 
-export default function RegisterForm() {
+export default function RegisterForm({ callbackUrl }: { callbackUrl?: string }) {
   const [state, action, pending] = useActionState(registerAction, initial);
 
   return (
     <form action={action} className="auth-form">
+      {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
       <label>
         Email
         <input type="email" name="email" required autoComplete="email" />

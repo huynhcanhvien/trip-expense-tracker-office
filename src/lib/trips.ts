@@ -166,6 +166,56 @@ export function formatTripDates(trip: {
   return null;
 }
 
+/** Resolve a trip from its reusable invite token (R1), or null if the token is unknown. */
+export async function getTripByInviteToken(
+  token: string,
+  client: Client = db(),
+): Promise<TripRow | null> {
+  if (!token) return null;
+  const res = await client.execute({
+    sql: `SELECT t.* FROM trips t
+            JOIN invitation_tokens it ON it.trip_id = t.id
+           WHERE it.token = ?`,
+    args: [token],
+  });
+  return (res.rows[0] as unknown as TripRow) ?? null;
+}
+
+export async function isMember(
+  tripId: number,
+  userId: number,
+  client: Client = db(),
+): Promise<boolean> {
+  const res = await client.execute({
+    sql: "SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ? LIMIT 1",
+    args: [tripId, userId],
+  });
+  return res.rows.length > 0;
+}
+
+export async function countExpenses(tripId: number, client: Client = db()): Promise<number> {
+  const res = await client.execute({
+    sql: "SELECT COUNT(*) AS c FROM expenses WHERE trip_id = ?",
+    args: [tripId],
+  });
+  return Number(res.rows[0].c);
+}
+
+/**
+ * Add a registered user to a trip (accept invite, R1). Idempotent: the unique
+ * (trip_id, user_id) index + INSERT OR IGNORE means re-accepting never duplicates.
+ */
+export async function addTripMember(
+  tripId: number,
+  userId: number,
+  client: Client = db(),
+): Promise<void> {
+  await client.execute({
+    sql: "INSERT OR IGNORE INTO trip_members (trip_id, user_id) VALUES (?, ?)",
+    args: [tripId, userId],
+  });
+}
+
 /** Fetch a trip only if the user is a member; otherwise null (don't leak existence). */
 export async function getTripForUser(
   tripId: number,

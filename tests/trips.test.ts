@@ -7,6 +7,10 @@ import {
   listTripsForUser,
   listTripMembers,
   getInvitationToken,
+  getTripByInviteToken,
+  isMember,
+  countExpenses,
+  addTripMember,
   TripError,
 } from "../src/lib/trips";
 import { createUser } from "../src/lib/accounts";
@@ -182,5 +186,35 @@ describe("listTripMembers + getInvitationToken", () => {
     const members = await listTripMembers(tripId, client);
     const ghost = members.find((m) => m.isGhost);
     expect(ghost).toMatchObject({ userId: null, isGhost: true, displayName: "Grandma" });
+  });
+});
+
+describe("invitation accept (scenario F, R1)", () => {
+  it("resolves a trip from its invite token", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Invite Trip", currency: "USD" }, creatorId, client);
+    const token = (await getInvitationToken(tripId, client))!;
+
+    expect((await getTripByInviteToken(token, client))?.id).toBe(tripId);
+    expect(await getTripByInviteToken("bogus-token", client)).toBeNull();
+  });
+
+  it("addTripMember is idempotent — re-accepting never duplicates", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+
+    expect(await isMember(tripId, outsiderId, client)).toBe(false);
+    await addTripMember(tripId, outsiderId, client);
+    await addTripMember(tripId, outsiderId, client); // repeat
+    expect(await isMember(tripId, outsiderId, client)).toBe(true);
+
+    const members = await listTripMembers(tripId, client);
+    expect(members.filter((m) => m.userId === outsiderId)).toHaveLength(1);
+  });
+
+  it("counts expenses for the preview", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    expect(await countExpenses(tripId, client)).toBe(0);
   });
 });

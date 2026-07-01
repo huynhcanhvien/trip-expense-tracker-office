@@ -16,6 +16,11 @@ export interface FormState {
   error?: string;
 }
 
+/** Only allow internal relative paths as a post-auth redirect (no open redirects). */
+function safeCallback(raw: string): string {
+  return raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+}
+
 export interface ForgotState {
   sent?: boolean;
 }
@@ -36,8 +41,11 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     throw err;
   }
 
+  // Carry any callbackUrl through to login so the invite flow resumes after verifying.
+  const raw = String(formData.get("callbackUrl") ?? "");
+  const cb = raw.startsWith("/") && !raw.startsWith("//") ? `&callbackUrl=${encodeURIComponent(raw)}` : "";
   // Outside the try so the redirect's control-flow throw isn't swallowed.
-  redirect("/login?registered=1");
+  redirect(`/login?registered=1${cb}`);
 }
 
 /** Log in with email + password. */
@@ -53,8 +61,9 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
     return { error: "Please verify your email — check your inbox for the link." };
   }
 
+  const redirectTo = safeCallback(String(formData.get("callbackUrl") ?? ""));
   try {
-    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
+    await signIn("credentials", { email, password, redirectTo });
   } catch (err) {
     // AuthError = bad credentials; anything else (incl. the NEXT_REDIRECT on
     // success) must propagate.
