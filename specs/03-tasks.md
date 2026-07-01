@@ -318,4 +318,4 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 - [ ] T19 — R2 storage adapter
 - [ ] T20 — Resend email adapter
 - [ ] T21 — Amplify deploy
-- [ ] T22 — Playwright e2e for scenarios A–G
+- [x] T22 — Playwright e2e for scenarios A–G
