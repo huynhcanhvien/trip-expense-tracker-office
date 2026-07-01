@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { requireUserId } from "@/lib/session";
 import {
   createTrip,
   getTripByInviteToken,
@@ -23,8 +24,7 @@ export async function createTripAction(
   _prev: TripFormState,
   formData: FormData,
 ): Promise<TripFormState> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const name = String(formData.get("name") ?? "");
   const currency = String(formData.get("currency") ?? "") as CurrencyCode;
@@ -33,7 +33,7 @@ export async function createTripAction(
 
   let tripId: number;
   try {
-    tripId = await createTrip({ name, currency, dateStart, dateEnd }, Number(session.user.id));
+    tripId = await createTrip({ name, currency, dateStart, dateEnd }, userId);
   } catch (err) {
     if (err instanceof TripError) return { error: err.message };
     throw err;
@@ -50,6 +50,7 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
   if (!session?.user) {
     redirect(`/login?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`);
   }
+  const userId = await requireUserId();
 
   const trip = await getTripByInviteToken(token);
   if (!trip || trip.status === "closed") {
@@ -57,7 +58,7 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
     redirect(`/invite/${token}`);
   }
 
-  await addTripMember(trip.id, Number(session.user.id));
+  await addTripMember(trip.id, userId);
   redirect(`/trips/${trip.id}`);
 }
 
@@ -66,14 +67,13 @@ export async function addGhostAction(
   _prev: TripFormState,
   formData: FormData,
 ): Promise<TripFormState> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const tripId = Number(formData.get("tripId"));
   const name = String(formData.get("name") ?? "");
 
   try {
-    await addGhostMember(tripId, name, Number(session.user.id));
+    await addGhostMember(tripId, name, userId);
   } catch (err) {
     if (err instanceof TripError) return { error: err.message };
     throw err;
@@ -85,11 +85,10 @@ export async function addGhostAction(
 
 /** Close (archive) a trip — creator only, one-way (spec R9). */
 export async function closeTripAction(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const tripId = Number(formData.get("tripId"));
-  await closeTrip(tripId, Number(session.user.id));
+  await closeTrip(tripId, userId);
 
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);

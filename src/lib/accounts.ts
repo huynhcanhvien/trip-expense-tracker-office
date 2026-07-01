@@ -90,6 +90,20 @@ export async function verifyCredentials(
   };
 }
 
+/** Look up a user by id. Returns null if not found (e.g. a stale session). */
+export async function getUserById(
+  id: number,
+  client: Client = db(),
+): Promise<PublicUser | null> {
+  if (!Number.isFinite(id)) return null;
+  const res = await client.execute({
+    sql: "SELECT id, email FROM users WHERE id = ?",
+    args: [id],
+  });
+  const row = res.rows[0];
+  return row ? { id: Number(row.id), email: String(row.email) } : null;
+}
+
 /** Look up a user by email (normalized). Returns null if not found. */
 export async function getUserByEmail(
   email: string,

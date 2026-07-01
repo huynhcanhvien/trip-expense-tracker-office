@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireUserId } from "@/lib/session";
 import { createExpense, updateExpense, deleteExpense, ExpenseError } from "@/lib/expenses";
 
 export interface ExpenseFormState {
@@ -15,8 +15,7 @@ export async function addExpenseAction(
   _prev: ExpenseFormState,
   formData: FormData,
 ): Promise<ExpenseFormState> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const tripId = Number(formData.get("tripId"));
   const includedMemberIds = formData.getAll("included").map((v) => Number(v));
@@ -34,7 +33,7 @@ export async function addExpenseAction(
         includedMemberIds,
         photoPath,
       },
-      Number(session.user.id),
+      userId,
     );
   } catch (err) {
     if (err instanceof ExpenseError) return { error: err.message };
@@ -50,8 +49,7 @@ export async function updateExpenseAction(
   _prev: ExpenseFormState,
   formData: FormData,
 ): Promise<ExpenseFormState> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const expenseId = Number(formData.get("expenseId"));
   const includedMemberIds = formData.getAll("included").map((v) => Number(v));
@@ -67,7 +65,7 @@ export async function updateExpenseAction(
         payerMemberId: Number(formData.get("payerMemberId")),
         includedMemberIds,
       },
-      Number(session.user.id),
+      userId,
     );
   } catch (err) {
     if (err instanceof ExpenseError) return { error: err.message };
@@ -80,11 +78,10 @@ export async function updateExpenseAction(
 
 /** Delete an expense (R5). Plain form action → redirects back to the trip. */
 export async function deleteExpenseAction(formData: FormData): Promise<void> {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const userId = await requireUserId();
 
   const expenseId = Number(formData.get("expenseId"));
-  const tripId = await deleteExpense(expenseId, Number(session.user.id));
+  const tripId = await deleteExpense(expenseId, userId);
 
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
