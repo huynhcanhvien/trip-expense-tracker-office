@@ -20,6 +20,11 @@ export interface PublicUser {
   email: string;
 }
 
+export interface AuthUser extends PublicUser {
+  /** Whether the account's email has been verified (spec R8). */
+  emailVerified: boolean;
+}
+
 /**
  * Create a new account. Throws AccountError on invalid input or duplicate email.
  * Email is not verified here — that's T6 (login is allowed with email_verified_at NULL until then).
@@ -61,12 +66,12 @@ export async function verifyCredentials(
   email: string,
   password: string,
   client: Client = db(),
-): Promise<PublicUser | null> {
+): Promise<AuthUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail || !password) return null;
 
   const res = await client.execute({
-    sql: "SELECT id, email, password_hash FROM users WHERE email = ?",
+    sql: "SELECT id, email, password_hash, email_verified_at FROM users WHERE email = ?",
     args: [normalizedEmail],
   });
   const row = res.rows[0];
@@ -75,5 +80,9 @@ export async function verifyCredentials(
   const ok = bcrypt.compareSync(password, String(row.password_hash));
   if (!ok) return null;
 
-  return { id: Number(row.id), email: String(row.email) };
+  return {
+    id: Number(row.id),
+    email: String(row.email),
+    emailVerified: row.email_verified_at != null,
+  };
 }

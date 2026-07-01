@@ -3,7 +3,8 @@
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
-import { createUser, AccountError } from "@/lib/accounts";
+import { createUser, verifyCredentials, AccountError } from "@/lib/accounts";
+import { issueEmailVerification } from "@/lib/verification";
 
 export interface FormState {
   error?: string;
@@ -18,7 +19,8 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   if (password !== confirm) return { error: "Passwords do not match" };
 
   try {
-    await createUser(email, password);
+    const user = await createUser(email, password);
+    await issueEmailVerification(user);
   } catch (err) {
     if (err instanceof AccountError) return { error: err.message };
     throw err;
@@ -32,6 +34,14 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+
+  // Pre-check so we can distinguish "wrong credentials" from "not verified yet"
+  // (authorize() also hard-blocks unverified sign-ins).
+  const user = await verifyCredentials(email, password);
+  if (!user) return { error: "Wrong email or password" };
+  if (!user.emailVerified) {
+    return { error: "Please verify your email — check your inbox for the link." };
+  }
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/dashboard" });

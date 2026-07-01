@@ -21,7 +21,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = typeof creds?.email === "string" ? creds.email : "";
         const password = typeof creds?.password === "string" ? creds.password : "";
         const user = await verifyCredentials(email, password);
-        if (!user) return null;
+        // Block sign-in until the email is verified (spec R8). The login action
+        // surfaces the friendly "check your inbox" message; this is the hard gate.
+        if (!user || !user.emailVerified) return null;
         return { id: String(user.id), email: user.email };
       },
     }),

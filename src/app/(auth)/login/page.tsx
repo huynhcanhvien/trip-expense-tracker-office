@@ -13,7 +13,7 @@ export default async function LoginPage({
       <h1>Log in</h1>
       {registered && (
         <p role="status" className="form-success">
-          Account created — please log in.
+          Account created — check your email for a verification link, then log in.
         </p>
       )}
       <LoginForm />
