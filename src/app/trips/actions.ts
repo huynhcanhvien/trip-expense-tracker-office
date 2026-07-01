@@ -1,17 +1,20 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import {
   createTrip,
   getTripByInviteToken,
   addTripMember,
+  addGhostMember,
   TripError,
 } from "@/lib/trips";
 import type { CurrencyCode } from "@/lib/currency";
 
 export interface TripFormState {
   error?: string;
+  ok?: boolean;
 }
 
 /** Create a trip for the logged-in user, then go to its page (scenario D, R6). */
@@ -55,4 +58,26 @@ export async function acceptInviteAction(formData: FormData): Promise<void> {
 
   await addTripMember(trip.id, Number(session.user.id));
   redirect(`/trips/${trip.id}`);
+}
+
+/** Add a ghost member by name (spec R1 ghost path). */
+export async function addGhostAction(
+  _prev: TripFormState,
+  formData: FormData,
+): Promise<TripFormState> {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const tripId = Number(formData.get("tripId"));
+  const name = String(formData.get("name") ?? "");
+
+  try {
+    await addGhostMember(tripId, name, Number(session.user.id));
+  } catch (err) {
+    if (err instanceof TripError) return { error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/trips/${tripId}`);
+  return { ok: true };
 }

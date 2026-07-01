@@ -251,3 +251,22 @@ button:disabled {
   color: #16a34a;
   font-size: 0.85rem;
 }
+
+.ghost-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.ghost-form input[type="text"] {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.ghost-form .form-error {
+  flex-basis: 100%;
+}

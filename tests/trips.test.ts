@@ -11,6 +11,7 @@ import {
   isMember,
   countExpenses,
   addTripMember,
+  addGhostMember,
   TripError,
 } from "../src/lib/trips";
 import { createUser } from "../src/lib/accounts";
@@ -216,5 +217,44 @@ describe("invitation accept (scenario F, R1)", () => {
     await seedUsers();
     const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
     expect(await countExpenses(tripId, client)).toBe(0);
+  });
+});
+
+describe("addGhostMember (R1 ghost path)", () => {
+  it("lets any member add a ghost, who appears as a guest", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    // Outsider joins, then adds a ghost (any member can).
+    await addTripMember(tripId, outsiderId, client);
+
+    await addGhostMember(tripId, "  Grandpa  ", outsiderId, client);
+    const members = await listTripMembers(tripId, client);
+    const ghost = members.find((m) => m.isGhost);
+    expect(ghost).toMatchObject({ userId: null, isGhost: true, displayName: "Grandpa" });
+  });
+
+  it("rejects a non-member", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    await expect(addGhostMember(tripId, "X", outsiderId, client)).rejects.toThrowError(
+      /not a member/i,
+    );
+  });
+
+  it("rejects an empty name", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    await expect(addGhostMember(tripId, "   ", creatorId, client)).rejects.toThrowError(
+      /name is required/i,
+    );
+  });
+
+  it("rejects adding to an archived trip", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    await client.execute({ sql: "UPDATE trips SET status='closed' WHERE id = ?", args: [tripId] });
+    await expect(addGhostMember(tripId, "Late", creatorId, client)).rejects.toThrowError(
+      /archived/i,
+    );
   });
 });

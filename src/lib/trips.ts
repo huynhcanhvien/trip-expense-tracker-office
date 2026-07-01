@@ -216,6 +216,31 @@ export async function addTripMember(
   });
 }
 
+/**
+ * Add a ghost member (by name only) to a trip — spec R1 ghost path. Any trip
+ * member may add one (round-3 decision). Throws TripError if the acting user
+ * isn't a member, the trip is archived, or the name is empty.
+ */
+export async function addGhostMember(
+  tripId: number,
+  name: string,
+  actingUserId: number,
+  client: Client = db(),
+): Promise<void> {
+  const clean = name.trim();
+  if (!clean) throw new TripError("Guest name is required");
+  if (clean.length > 80) throw new TripError("Name is too long");
+
+  const trip = await getTripForUser(tripId, actingUserId, client);
+  if (!trip) throw new TripError("You're not a member of this trip");
+  if (trip.status === "closed") throw new TripError("This trip is archived");
+
+  await client.execute({
+    sql: "INSERT INTO trip_members (trip_id, ghost_name) VALUES (?, ?)",
+    args: [tripId, clean],
+  });
+}
+
 /** Fetch a trip only if the user is a member; otherwise null (don't leak existence). */
 export async function getTripForUser(
   tripId: number,

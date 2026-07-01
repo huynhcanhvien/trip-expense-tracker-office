@@ -10,6 +10,7 @@ import { CURRENCY_META } from "@/lib/currency";
 import { baseUrl } from "@/lib/urls";
 import Header from "@/app/components/Header";
 import ShareButton from "./ShareButton";
+import AddGhostForm from "./AddGhostForm";
 
 // Trip detail page (T10): metadata + member list + share invite link.
 // Expenses + balances arrive in T13–T14; ghost adding in T12.
@@ -52,6 +53,7 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
               </li>
             ))}
           </ul>
+          {trip.status === "open" && <AddGhostForm tripId={trip.id} />}
         </section>
 
         {trip.status === "open" && inviteUrl && (
