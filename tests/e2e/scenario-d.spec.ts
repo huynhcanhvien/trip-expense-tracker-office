@@ -9,7 +9,7 @@ test("Scenario D: create a trip via the New trip dialog → trip page shows name
   await login(page, user);
 
   const name = uniq("Tokyo");
-  await page.getByRole("button", { name: "New trip", exact: true }).click();
+  await page.getByRole("button", { name: "Create new trip" }).click();
   const dialog = page.locator("dialog.modal[open]");
   await expect(dialog).toBeVisible();
 
@@ -26,7 +26,7 @@ test("Scenario D: end date before start date is rejected (dialog stays open)", a
   const user = await seedVerifiedUser("dave2");
   await login(page, user);
 
-  await page.getByRole("button", { name: "New trip", exact: true }).click();
+  await page.getByRole("button", { name: "Create new trip" }).click();
   const dialog = page.locator("dialog.modal[open]");
 
   await dialog.getByLabel("Trip name").fill(uniq("Bad Dates"));

@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth";
 import Header from "@/app/components/Header";
 import { listTripsForUser, formatTripDates, type TripListItem } from "@/lib/trips";
 import { CURRENCY_META } from "@/lib/currency";
-import NewTripDialog from "./NewTripDialog";
+import NewTripModal from "./NewTripModal";
+import NewTripButton from "./NewTripButton";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,13 +21,14 @@ export default async function DashboardPage() {
       <main className="page">
         <div className="page-head">
           <h1>Your trips</h1>
-          <NewTripDialog />
+          {/* One trigger visible at a time; both open the single shared dialog below. */}
+          {trips.length > 0 && <NewTripButton />}
         </div>
 
         {trips.length === 0 ? (
           <div className="empty-state">
             <p className="muted">You don&apos;t have any trips yet.</p>
-            <NewTripDialog label="Create new trip" />
+            <NewTripButton label="Create new trip" />
           </div>
         ) : (
           <>
@@ -35,6 +37,9 @@ export default async function DashboardPage() {
           </>
         )}
       </main>
+
+      {/* Single shared New-trip dialog, opened by any NewTripButton above. */}
+      <NewTripModal />
     </>
   );
 }
