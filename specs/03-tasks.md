@@ -298,8 +298,8 @@ Implements R8 and R10. Once this phase is done, the app has working accounts but
 ## Progress
 
 - [x] T1 — Scaffold Next.js project
-- [ ] T2 — Currency module
-- [ ] T3 — Balance computation
+- [x] T2 — Currency module
+- [x] T3 — Balance computation
 - [ ] T4 — Database connection + schema + migrate
 - [ ] T5 — Auth.js (register / login / logout)
 - [ ] T6 — Email verification (Mailpit)

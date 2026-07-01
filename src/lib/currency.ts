@@ -1,3 +1,59 @@
-// Currency helpers — plan §3.2. Implemented in T2.
-// Fixed supported list per spec R6: USD/EUR/GBP (2dp), VND/JPY (0dp).
-export {};
+// Currency helpers — plan §3.2, spec R6.
+// Fixed supported list: USD/EUR/GBP (2dp), VND/JPY (0dp). Fixed per trip for its lifetime.
+import Big from "big.js";
+
+export type CurrencyCode = "USD" | "EUR" | "GBP" | "VND" | "JPY";
+
+/** Decimal places + a display locale for each supported currency. */
+export const CURRENCY_META: Record<CurrencyCode, { dp: number; locale: string; label: string }> = {
+  USD: { dp: 2, locale: "en-US", label: "US Dollar" },
+  EUR: { dp: 2, locale: "en-IE", label: "Euro" },
+  GBP: { dp: 2, locale: "en-GB", label: "British Pound" },
+  VND: { dp: 0, locale: "vi-VN", label: "Vietnamese Đồng" },
+  JPY: { dp: 0, locale: "ja-JP", label: "Japanese Yen" },
+};
+
+export const SUPPORTED_CURRENCIES = Object.keys(CURRENCY_META) as CurrencyCode[];
+
+export function isSupportedCurrency(value: string): value is CurrencyCode {
+  return Object.prototype.hasOwnProperty.call(CURRENCY_META, value);
+}
+
+/** Decimal places for a currency (USD/EUR/GBP → 2, VND/JPY → 0). */
+export function decimalPlaces(currency: CurrencyCode): number {
+  return CURRENCY_META[currency].dp;
+}
+
+/**
+ * Split `amount` equally across the included members (plan §3.2).
+ *
+ * Sorts ids ascending; the first N-1 members each get the floor share
+ * (rounded down to `dp` decimals) and the highest-id member absorbs the
+ * remainder. Guarantees the shares sum to `amount` exactly, deterministically.
+ */
+export function share_of(amount: Big, includedMembers: number[], dp: number): Map<number, Big> {
+  const ids = [...includedMembers].sort((a, b) => a - b);
+  const n = ids.length;
+  if (n === 0) throw new Error("share_of: included set must contain at least one member");
+
+  const result = new Map<number, Big>();
+  const per = amount.div(n).round(dp, Big.roundDown);
+
+  let allocated = new Big(0);
+  for (let i = 0; i < n - 1; i++) {
+    result.set(ids[i], per);
+    allocated = allocated.plus(per);
+  }
+  // Highest-id member absorbs the rounding remainder.
+  result.set(ids[n - 1], amount.minus(allocated));
+
+  return result;
+}
+
+/** Format an amount in the trip's currency, e.g. "$12.34", "¥500", "500 ₫". */
+export function formatAmount(amount: Big, currency: CurrencyCode): string {
+  const { locale } = CURRENCY_META[currency];
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(
+    Number(amount.toString()),
+  );
+}
