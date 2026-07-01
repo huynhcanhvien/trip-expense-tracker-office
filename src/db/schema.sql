@@ -1,0 +1,4 @@
+-- Schema — plan §2, spec R7. Tables filled in by T4.
+-- User, Trip, TripMember (CHECK user_id XOR ghost_name), Expense,
+-- ExpenseShare, InvitationToken, EmailVerificationToken, PasswordResetToken.
+-- Use CREATE TABLE IF NOT EXISTS so migrate.ts is idempotent.
