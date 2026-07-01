@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import Header from "@/app/components/Header";
@@ -13,6 +14,11 @@ export default async function DashboardPage() {
       <main className="page">
         <h1>Your trips</h1>
         <p className="muted">You&apos;re logged in as {session.user.email}.</p>
+        <p>
+          <Link href="/dashboard/new">
+            <button type="button">New trip</button>
+          </Link>
+        </p>
         <p className="muted">Trip listing arrives in T9.</p>
       </main>
     </>
