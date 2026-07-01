@@ -4,11 +4,7 @@ import type { Client } from "@libsql/client";
 import { db } from "./db";
 import { createEmailVerificationToken, createPasswordResetToken } from "./tokens";
 import { sendEmail } from "./email";
-
-/** App base URL for building links in emails. */
-export function baseUrl(): string {
-  return process.env.AUTH_URL || "http://localhost:3000";
-}
+import { baseUrl } from "./urls";
 
 /** Create a verification token for the user and email them the link. */
 export async function issueEmailVerification(

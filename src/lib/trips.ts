@@ -112,6 +112,49 @@ export async function listTripsForUser(
   }));
 }
 
+export interface TripMemberRow {
+  id: number;
+  userId: number | null;
+  isGhost: boolean;
+  displayName: string;
+}
+
+/** List a trip's members (registered + ghosts), ordered by join order. */
+export async function listTripMembers(
+  tripId: number,
+  client: Client = db(),
+): Promise<TripMemberRow[]> {
+  const res = await client.execute({
+    sql: `SELECT tm.id, tm.user_id, tm.ghost_name, u.email
+            FROM trip_members tm
+            LEFT JOIN users u ON u.id = tm.user_id
+           WHERE tm.trip_id = ?
+           ORDER BY tm.id`,
+    args: [tripId],
+  });
+  return res.rows.map((r) => {
+    const isGhost = r.user_id == null;
+    return {
+      id: Number(r.id),
+      userId: isGhost ? null : Number(r.user_id),
+      isGhost,
+      displayName: isGhost ? String(r.ghost_name) : String(r.email),
+    };
+  });
+}
+
+/** The reusable invitation token for a trip (R1), or null if missing. */
+export async function getInvitationToken(
+  tripId: number,
+  client: Client = db(),
+): Promise<string | null> {
+  const res = await client.execute({
+    sql: "SELECT token FROM invitation_tokens WHERE trip_id = ?",
+    args: [tripId],
+  });
+  return res.rows[0] ? String(res.rows[0].token) : null;
+}
+
 /** Human-readable date range for a trip, or null if no dates set. */
 export function formatTripDates(trip: {
   date_start: string | null;

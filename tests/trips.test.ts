@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import type { Client } from "@libsql/client";
 import { makeTestDb, type TestDb } from "./helpers/testDb";
-import { createTrip, getTripForUser, listTripsForUser, TripError } from "../src/lib/trips";
+import {
+  createTrip,
+  getTripForUser,
+  listTripsForUser,
+  listTripMembers,
+  getInvitationToken,
+  TripError,
+} from "../src/lib/trips";
 import { createUser } from "../src/lib/accounts";
 
 let testDb: TestDb;
@@ -143,5 +150,37 @@ describe("listTripsForUser", () => {
   it("returns an empty array for a user with no trips", async () => {
     await seedUsers();
     expect(await listTripsForUser(outsiderId, client)).toEqual([]);
+  });
+});
+
+describe("listTripMembers + getInvitationToken", () => {
+  it("lists the creator as a registered member and exposes the invite token", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+
+    const members = await listTripMembers(tripId, client);
+    expect(members).toHaveLength(1);
+    expect(members[0]).toMatchObject({
+      userId: creatorId,
+      isGhost: false,
+      displayName: "creator@example.com",
+    });
+
+    const token = await getInvitationToken(tripId, client);
+    expect(token).toBeTruthy();
+    expect(token!.length).toBeGreaterThanOrEqual(40);
+  });
+
+  it("renders ghost members by their name", async () => {
+    await seedUsers();
+    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+    await client.execute({
+      sql: "INSERT INTO trip_members (trip_id, ghost_name) VALUES (?, ?)",
+      args: [tripId, "Grandma"],
+    });
+
+    const members = await listTripMembers(tripId, client);
+    const ghost = members.find((m) => m.isGhost);
+    expect(ghost).toMatchObject({ userId: null, isGhost: true, displayName: "Grandma" });
   });
 });

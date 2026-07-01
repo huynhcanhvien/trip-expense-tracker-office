@@ -206,3 +206,48 @@ button:disabled {
   font-size: 0.85rem;
   color: #64748b;
 }
+
+.member-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.member-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 0.4rem;
+  padding: 0.05rem 0.35rem;
+}
+
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-url {
+  flex: 1 1 16rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.toast {
+  color: #16a34a;
+  font-size: 0.85rem;
+}
