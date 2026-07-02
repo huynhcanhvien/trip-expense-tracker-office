@@ -11,8 +11,8 @@ export default function DeleteExpenseButton({ expenseId }: { expenseId: number }
       }}
     >
       <input type="hidden" name="expenseId" value={expenseId} />
-      <button type="submit" className="link-danger">
-        Delete
+      <button type="submit" className="icon-btn" title="Delete expense" aria-label="Delete expense">
+        🗑️
       </button>
     </form>
   );

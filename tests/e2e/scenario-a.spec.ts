@@ -13,8 +13,8 @@ test("Scenario A: simple equal-split expense produces correct net balances", asy
 
   await addExpense(page, { description: "Dinner", amount: "60", payer: alice.email });
 
-  await expect(page.locator(".balance-amount.pos")).toHaveText("+$40.00");
-  const negatives = page.locator(".balance-amount.neg");
+  await expect(page.locator(".balance-row .pos")).toHaveText("+$40.00");
+  const negatives = page.locator(".balance-row .neg");
   await expect(negatives).toHaveCount(2);
   await expect(negatives.nth(0)).toHaveText("-$20.00");
   await expect(negatives.nth(1)).toHaveText("-$20.00");

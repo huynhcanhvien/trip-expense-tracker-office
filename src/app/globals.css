@@ -544,3 +544,189 @@ button:disabled {
   gap: 0.45rem;
   font-size: 0.9rem;
 }
+
+/* --- Trip detail: legacy-inspired cards, avatars, rows (aurora palette) --- */
+.card {
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem 1.35rem;
+  margin-top: 1.1rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin: 0.25rem 0 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--violet-deep);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  margin-bottom: 0.8rem;
+}
+
+.trip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.trip-header h1 {
+  margin: 0;
+}
+.trip-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.25;
+}
+.trip-total strong {
+  font-size: 1.3rem;
+  color: var(--violet-deep);
+}
+
+/* Colored initials avatars */
+.avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: #4a4066;
+  flex: 0 0 auto;
+  box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.06);
+}
+.avatar.sm {
+  width: 1.7rem;
+  height: 1.7rem;
+  font-size: 0.68rem;
+}
+.avatar.lg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.05rem;
+}
+
+.member-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Balances: avatar + name + net, dashed separators (override earlier glass-card rule) */
+.balance-list {
+  gap: 0;
+}
+.balance-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  font-weight: 600;
+}
+.balance-row:last-child {
+  border-bottom: none;
+}
+.balance-row .grow {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pos {
+  color: var(--pos);
+  font-weight: 800;
+}
+.neg {
+  color: var(--neg);
+  font-weight: 800;
+}
+
+/* Expense rows: payer avatar + description/sub + amount + thumb + edit/delete */
+.expense {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.5);
+}
+.expense .grow {
+  flex: 1;
+  min-width: 0;
+}
+.expense .desc {
+  font-weight: 700;
+}
+.expense .sub {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.expense .amt {
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--violet-deep);
+  font-variant-numeric: tabular-nums;
+}
+.thumb {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  display: block;
+}
+.expense-ops {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.icon-btn {
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  padding: 0.25rem 0.4rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 0.5rem;
+}
+.icon-btn:hover {
+  background: rgba(124, 108, 240, 0.12);
+  transform: none;
+  box-shadow: none;
+}
+
+.empty {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  color: var(--ink-soft);
+}
+.empty .big {
+  display: block;
+  font-size: 2.3rem;
+  margin-bottom: 0.4rem;
+}

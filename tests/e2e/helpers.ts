@@ -59,7 +59,7 @@ export async function createTripUI(
 export async function addGhost(page: Page, name: string): Promise<void> {
   await page.getByPlaceholder("Guest name").fill(name);
   await page.getByRole("button", { name: /add guest/i }).click();
-  await expect(page.locator(".member-list")).toContainText(name);
+  await expect(page.locator(".member-chips")).toContainText(name);
 }
 
 /** Fill + submit the manual (top) add-expense form. `exclude` = member names to uncheck. */

@@ -21,12 +21,12 @@ test("Scenario F: logged-in non-member previews then accepts an invitation", asy
   // Accept → added and redirected to the trip.
   await accept.click();
   await page.waitForURL(new RegExp(`/trips/${tripId}$`));
-  await expect(page.locator(".member-list")).toContainText(bob.email);
+  await expect(page.locator(".member-chips")).toContainText(bob.email);
 
   // Re-clicking the link as an existing member → straight to the trip (no double-add).
   await page.goto(`/invite/${token}`);
   await page.waitForURL(new RegExp(`/trips/${tripId}$`));
-  await expect(page.locator(".member-list").getByText(bob.email)).toHaveCount(1);
+  await expect(page.locator(".member-chips").getByText(bob.email)).toHaveCount(1);
 });
 
 test("Scenario F: an invalid invite token shows a friendly error", async ({ page }) => {

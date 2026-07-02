@@ -19,8 +19,8 @@ test("Scenario G: payer excluded from the split still gets credited", async ({ p
     exclude: [alice.email],
   });
 
-  await expect(page.locator(".balance-amount.pos")).toHaveText("+$20.00");
-  const negatives = page.locator(".balance-amount.neg");
+  await expect(page.locator(".balance-row .pos")).toHaveText("+$20.00");
+  const negatives = page.locator(".balance-row .neg");
   await expect(negatives).toHaveCount(2);
   await expect(negatives.nth(0)).toHaveText("-$10.00");
   await expect(negatives.nth(1)).toHaveText("-$10.00");
