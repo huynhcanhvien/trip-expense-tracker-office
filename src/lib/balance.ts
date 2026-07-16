@@ -13,6 +13,12 @@ export interface ExpenseInput {
   amount: Big;
   /** TripMember ids the expense is split equally among (the "included" set). */
   includedMemberIds: number[];
+  /**
+   * Custom split: exact amount owed per member (memberId → amount). When set,
+   * these are used verbatim instead of an equal split. The amounts sum to
+   * `amount` (enforced when the expense is saved).
+   */
+  customShares?: Map<number, Big>;
 }
 
 /**
@@ -43,8 +49,10 @@ export function computeBalances(
   for (const e of expenses) {
     // Payer is credited the full amount they paid...
     add(e.payerMemberId, e.amount);
-    // ...and each included member is debited their equal share.
-    for (const [memberId, shareValue] of share_of(e.amount, e.includedMemberIds, dp)) {
+    // ...and each included member is debited their share: exact amounts for a
+    // custom split, otherwise an equal share of the total.
+    const shares = e.customShares ?? share_of(e.amount, e.includedMemberIds, dp);
+    for (const [memberId, shareValue] of shares) {
       add(memberId, shareValue.times(-1));
     }
   }

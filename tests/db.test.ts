@@ -20,101 +20,65 @@ beforeAll(async () => {
 afterAll(() => client.close());
 
 describe("schema.sql", () => {
-  it("creates all 8 tables", async () => {
+  it("creates the four core tables (no accounts)", async () => {
     const res = await client.execute(
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
     );
     const names = res.rows.map((r) => r.name as string).sort();
-    expect(names).toEqual(
-      [
-        "email_verification_tokens",
-        "expense_shares",
-        "expenses",
-        "invitation_tokens",
-        "password_reset_tokens",
-        "trip_members",
-        "trips",
-        "users",
-      ].sort(),
-    );
+    expect(names).toEqual(["expense_shares", "expenses", "trip_members", "trips"].sort());
   });
 
-  it("round-trips a User row (insert → read → delete)", async () => {
+  it("round-trips a Trip row and enforces a unique public_id", async () => {
     await client.execute({
-      sql: "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-      args: ["smoke@test.local", "hash"],
+      sql: "INSERT INTO trips (public_id, name, currency) VALUES (?, ?, ?)",
+      args: ["slug-1", "Smoke", "USD"],
     });
 
     const read = await client.execute({
-      sql: "SELECT id, email, email_verified_at FROM users WHERE email = ?",
-      args: ["smoke@test.local"],
+      sql: "SELECT public_id, name, status FROM trips WHERE public_id = ?",
+      args: ["slug-1"],
     });
     expect(read.rows.length).toBe(1);
-    expect(read.rows[0].email).toBe("smoke@test.local");
-    expect(read.rows[0].email_verified_at).toBeNull();
+    expect(read.rows[0].name).toBe("Smoke");
+    expect(read.rows[0].status).toBe("open");
 
-    const id = read.rows[0].id as number;
-    await client.execute({ sql: "DELETE FROM users WHERE id = ?", args: [id] });
-
-    const gone = await client.execute({ sql: "SELECT 1 FROM users WHERE id = ?", args: [id] });
-    expect(gone.rows.length).toBe(0);
+    // Duplicate public_id → rejected by the UNIQUE constraint.
+    await expect(
+      client.execute({
+        sql: "INSERT INTO trips (public_id, name, currency) VALUES (?, ?, ?)",
+        args: ["slug-1", "Dup", "USD"],
+      }),
+    ).rejects.toThrow();
   });
 
   it("rejects an unsupported currency (R6)", async () => {
-    const uid = await seedUser("cur@test.local");
     await expect(
       client.execute({
-        sql: "INSERT INTO trips (name, currency, creator_user_id) VALUES (?, ?, ?)",
-        args: ["Bad", "GBP", uid], // GBP is no longer supported
+        sql: "INSERT INTO trips (public_id, name, currency) VALUES (?, ?, ?)",
+        args: ["slug-cur", "Bad", "GBP"], // GBP is not supported
       }),
     ).rejects.toThrow();
   });
 
-  it("enforces the TripMember user_id XOR ghost_name CHECK (plan §2)", async () => {
-    const uid = await seedUser("member@test.local");
-    const tripId = await seedTrip(uid);
-
-    // A registered member and a ghost are both valid.
+  it("requires a participant to have a name", async () => {
+    const tripId = await seedTrip("slug-mem");
     await expect(
       client.execute({
-        sql: "INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)",
-        args: [tripId, uid],
+        sql: "INSERT INTO trip_members (trip_id, name) VALUES (?, ?)",
+        args: [tripId, "Alice"],
       }),
     ).resolves.toBeTruthy();
-    await expect(
-      client.execute({
-        sql: "INSERT INTO trip_members (trip_id, ghost_name) VALUES (?, ?)",
-        args: [tripId, "Ghosty"],
-      }),
-    ).resolves.toBeTruthy();
-
-    // Both set → rejected.
-    await expect(
-      client.execute({
-        sql: "INSERT INTO trip_members (trip_id, user_id, ghost_name) VALUES (?, ?, ?)",
-        args: [tripId, uid, "Nope"],
-      }),
-    ).rejects.toThrow();
-
-    // Neither set → rejected.
+    // NULL name → rejected (NOT NULL).
     await expect(
       client.execute({ sql: "INSERT INTO trip_members (trip_id) VALUES (?)", args: [tripId] }),
     ).rejects.toThrow();
   });
 });
 
-async function seedUser(email: string): Promise<number> {
+async function seedTrip(publicId: string): Promise<number> {
   const r = await client.execute({
-    sql: "INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING id",
-    args: [email, "hash"],
-  });
-  return r.rows[0].id as number;
-}
-
-async function seedTrip(uid: number): Promise<number> {
-  const r = await client.execute({
-    sql: "INSERT INTO trips (name, currency, creator_user_id) VALUES (?, ?, ?) RETURNING id",
-    args: ["Trip", "USD", uid],
+    sql: "INSERT INTO trips (public_id, name, currency) VALUES (?, ?, ?) RETURNING id",
+    args: [publicId, "Trip", "USD"],
   });
   return r.rows[0].id as number;
 }

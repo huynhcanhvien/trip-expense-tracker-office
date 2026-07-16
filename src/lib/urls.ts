@@ -1,4 +1,4 @@
-// App base URL for building absolute links (invites, email links).
+// App base URL for building absolute links (shareable trip URLs).
 export function baseUrl(): string {
-  return process.env.AUTH_URL || "http://localhost:3000";
+  return process.env.APP_URL || process.env.AUTH_URL || "http://localhost:3000";
 }

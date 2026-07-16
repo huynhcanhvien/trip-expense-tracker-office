@@ -22,6 +22,20 @@ async function main() {
   const client = db();
   await client.executeMultiple(sql);
 
+  // schema.sql is CREATE ... IF NOT EXISTS, so new columns on existing tables
+  // need an explicit ALTER. SQLite has no "ADD COLUMN IF NOT EXISTS", so we try
+  // and ignore the "duplicate column" error on databases already migrated.
+  const additiveColumns = [
+    "ALTER TABLE expense_shares ADD COLUMN share_amount TEXT",
+  ];
+  for (const stmt of additiveColumns) {
+    try {
+      await client.execute(stmt);
+    } catch (err) {
+      if (!/duplicate column/i.test(String(err))) throw err;
+    }
+  }
+
   const target = process.env.TURSO_DATABASE_URL ?? "file:local.db (local fallback)";
   const tables = await client.execute(
     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",

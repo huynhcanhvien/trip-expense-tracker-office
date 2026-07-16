@@ -1,0 +1,102 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import Avatar from "@/app/components/Avatar";
+import { getRecentTrips, forgetTrip } from "@/lib/recent-trips";
+import { fetchTripSummariesAction } from "@/app/trips/actions";
+
+interface Summary {
+  public_id: string;
+  name: string;
+  currency: string;
+  status: "open" | "closed";
+  memberCount: number;
+}
+
+type Load = "loading" | "empty" | "ready";
+
+// The home page's "recent trips" list. The set of trips lives in this browser's
+// localStorage; we fetch fresh names/counts from the server for the ones that
+// still exist (a deleted/unknown trip simply drops off).
+export default function RecentTrips() {
+  const [status, setStatus] = useState<Load>("loading");
+  const [trips, setTrips] = useState<Summary[]>([]);
+
+  useEffect(() => {
+    const recent = getRecentTrips();
+    if (recent.length === 0) {
+      setStatus("empty");
+      return;
+    }
+    let active = true;
+    fetchTripSummariesAction(recent.map((t) => t.publicId))
+      .then((summaries) => {
+        if (!active) return;
+        setTrips(summaries);
+        setStatus(summaries.length > 0 ? "ready" : "empty");
+      })
+      .catch(() => {
+        if (active) setStatus("empty");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Nothing to show yet (still loading) or no trips in this browser → render
+  // nothing, so the home page shows only the hero (the "first part").
+  if (status !== "ready") return null;
+
+  const active = trips.filter((t) => t.status === "open");
+  const archived = trips.filter((t) => t.status === "closed");
+
+  return (
+    <>
+      <div className="page-head">
+        <h2>🧳 Your trips</h2>
+      </div>
+      {active.length > 0 && <TripSection title="🌴 Active" trips={active} />}
+      {archived.length > 0 && <TripSection title="🗄️ Archived" trips={archived} />}
+    </>
+  );
+}
+
+function TripSection({ title, trips }: { title: string; trips: Summary[] }) {
+  return (
+    <section className="trip-section">
+      <h2>{title}</h2>
+      <ul className="trip-list">
+        {trips.map((t) => (
+          <li key={t.public_id}>
+            <Link href={`/trips/${t.public_id}`} className="trip-card">
+              <div className="trip-card-top">
+                <Avatar name={t.name} />
+                <span className="trip-card-name">{t.name}</span>
+                {t.status === "closed" && <span className="trip-badge">archived</span>}
+              </div>
+              <div className="trip-card-meta">
+                <span>💱 {t.currency}</span>
+                <span>
+                  👥 {t.memberCount} {t.memberCount === 1 ? "person" : "people"}
+                </span>
+              </div>
+            </Link>
+            <button
+              type="button"
+              className="trip-forget"
+              title="Remove from this list"
+              aria-label={`Remove ${t.name} from recent`}
+              onClick={() => {
+                forgetTrip(t.public_id);
+                setTimeout(() => window.location.reload(), 0);
+              }}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

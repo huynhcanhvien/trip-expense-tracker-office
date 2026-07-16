@@ -2,14 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
-import { requireUserId } from "@/lib/session";
 import {
   createTrip,
-  getTripByInviteToken,
-  addTripMember,
-  addGhostMember,
+  getTripByPublicId,
+  getTripSummaries,
+  addParticipant,
   closeTrip,
+  type TripSummary,
   TripError,
 } from "@/lib/trips";
 import type { CurrencyCode } from "@/lib/currency";
@@ -17,79 +16,78 @@ import type { CurrencyCode } from "@/lib/currency";
 export interface TripFormState {
   error?: string;
   ok?: boolean;
+  /** trip_members.id of a just-added participant (used to claim "you"). */
+  memberId?: number;
 }
 
-/** Create a trip for the logged-in user, then go to its page (scenario D, R6). */
+/** Create a trip (no account needed), then go to its shareable page. */
 export async function createTripAction(
   _prev: TripFormState,
   formData: FormData,
 ): Promise<TripFormState> {
-  const userId = await requireUserId();
-
   const name = String(formData.get("name") ?? "");
   const currency = String(formData.get("currency") ?? "") as CurrencyCode;
-  const dateStart = String(formData.get("dateStart") ?? "").trim() || undefined;
-  const dateEnd = String(formData.get("dateEnd") ?? "").trim() || undefined;
+  const participants = formData
+    .getAll("participants")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 
-  let tripId: number;
+  let publicId: string;
   try {
-    tripId = await createTrip({ name, currency, dateStart, dateEnd }, userId);
+    publicId = await createTrip({ name, currency, participants });
   } catch (err) {
     if (err instanceof TripError) return { error: err.message };
     throw err;
   }
 
-  redirect(`/trips/${tripId}`);
+  redirect(`/trips/${publicId}`);
 }
 
-/** Accept a trip invitation (scenario F). Adds the current user, then goes to the trip. */
-export async function acceptInviteAction(formData: FormData): Promise<void> {
-  const token = String(formData.get("token") ?? "");
-
-  const session = await auth();
-  if (!session?.user) {
-    redirect(`/login?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`);
-  }
-  const userId = await requireUserId();
-
-  const trip = await getTripByInviteToken(token);
-  if (!trip || trip.status === "closed") {
-    // Token vanished or trip closed between preview and accept.
-    redirect(`/invite/${token}`);
-  }
-
-  await addTripMember(trip.id, userId);
-  redirect(`/trips/${trip.id}`);
-}
-
-/** Add a ghost member by name (spec R1 ghost path). */
-export async function addGhostAction(
+/** Add a participant (by name) to a trip. Anyone with the link may do this. */
+export async function addParticipantAction(
   _prev: TripFormState,
   formData: FormData,
 ): Promise<TripFormState> {
-  const userId = await requireUserId();
-
-  const tripId = Number(formData.get("tripId"));
+  const publicId = String(formData.get("publicId") ?? "");
   const name = String(formData.get("name") ?? "");
 
+  const trip = await getTripByPublicId(publicId);
+  if (!trip) return { error: "Trip not found" };
+
+  let memberId: number;
   try {
-    await addGhostMember(tripId, name, userId);
+    memberId = await addParticipant(trip.id, name);
   } catch (err) {
     if (err instanceof TripError) return { error: err.message };
     throw err;
   }
 
-  revalidatePath(`/trips/${tripId}`);
-  return { ok: true };
+  revalidatePath(`/trips/${publicId}`);
+  return { ok: true, memberId };
 }
 
-/** Close (archive) a trip — creator only, one-way (spec R9). */
+/** Close (archive) a trip — permanent, one-way. */
 export async function closeTripAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const publicId = String(formData.get("publicId") ?? "");
+  const trip = await getTripByPublicId(publicId);
+  if (!trip) redirect("/");
 
-  const tripId = Number(formData.get("tripId"));
-  await closeTrip(tripId, userId);
+  await closeTrip(trip.id);
 
-  revalidatePath(`/trips/${tripId}`);
-  redirect(`/trips/${tripId}`);
+  revalidatePath(`/trips/${publicId}`);
+  redirect(`/trips/${publicId}`);
+}
+
+/** Fresh summaries for the browser's "recent trips" home page. */
+export async function fetchTripSummariesAction(
+  publicIds: string[],
+): Promise<Pick<TripSummary, "public_id" | "name" | "currency" | "status" | "memberCount">[]> {
+  const summaries = await getTripSummaries(publicIds);
+  return summaries.map((t) => ({
+    public_id: t.public_id,
+    name: t.name,
+    currency: t.currency,
+    status: t.status,
+    memberCount: t.memberCount,
+  }));
 }

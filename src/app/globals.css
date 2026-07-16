@@ -1,98 +1,121 @@
-/* ✨ Aurora — a soft, dreamy pastel theme inspired by twilight aurora gradients. */
+/* OpenAI "Supply Co." vibe — clean monochrome (black on white), a soft blue
+   hero wash, huge tight-tracked display type, and uppercase monospace eyebrow
+   labels. Flat white surfaces with hairline borders; no glass, no pastels. */
+
 :root {
-  --ink: #34305a; /* deep indigo text */
-  --ink-soft: #6f6a94; /* muted lavender-grey */
-  --line: rgba(124, 108, 240, 0.16); /* soft periwinkle hairline */
+  /* Soft blue hero wash (from the reference hero gradient) */
+  --blue-50: #f4f8fe;
+  --blue-200: #d7e6fb;
 
-  --violet: #7c6cf0;
-  --violet-deep: #6a54e8;
-  --pink: #e08fd6;
-  --peach: #ff9f86;
+  /* Text + hairlines */
+  --ink: #0a0a0a; /* near-black — primary text */
+  --ink-soft: #6b6b6b; /* mid grey — secondary text/labels */
+  --line: #e6e6e6; /* hairline border */
 
-  --glass: rgba(255, 255, 255, 0.66);
-  --glass-strong: rgba(255, 255, 255, 0.82);
+  --accent: #0a0a0a; /* black: primary buttons, links, amounts */
+  --surface-soft: #f5f5f5; /* subtle grey fill: inputs, secondary pills, nested rows */
 
-  --pos: #2f9e83; /* soft teal-green (should receive) */
-  --neg: #e06a8b; /* soft rose (should pay) */
+  /* Financial semantics — muted, to fit the monochrome look */
+  --pos: #157347; /* should receive */
+  --neg: #c0392b; /* should pay */
+  --settled: #e0448c; /* pink "all settled" message, matching the 💖 icon */
 
-  --radius: 1.1rem;
-  --radius-sm: 0.7rem;
-  --shadow: 0 10px 30px -12px rgba(80, 60, 160, 0.28);
-  --shadow-sm: 0 4px 16px -8px rgba(80, 60, 160, 0.25);
-  --accent-grad: linear-gradient(120deg, var(--violet) 0%, var(--pink) 55%, var(--peach) 100%);
+  --radius: 1rem;
+  --radius-sm: 0.6rem;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 30px -22px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+/* --- Base / reset --- */
 html {
   height: 100%;
   color-scheme: light;
+  background-color: #ffffff;
 }
-
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) prevents horizontal scroll without turning the page
+     into a nested scroll container. */
+  overflow-x: clip;
 }
-
 body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
   color: var(--ink);
-  font-family: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Quicksand",
-    system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Dreamy aurora wash — soft blobs of periwinkle, peach, mauve over lavender-cream. */
-  background:
-    radial-gradient(1200px 800px at 12% 8%, #e9ddff 0%, transparent 55%),
-    radial-gradient(1000px 700px at 88% 12%, #ffe0d4 0%, transparent 52%),
-    radial-gradient(1100px 900px at 78% 92%, #d7e0ff 0%, transparent 55%),
-    radial-gradient(900px 700px at 20% 95%, #f6d9ef 0%, transparent 50%),
-    linear-gradient(160deg, #f5eefc 0%, #fdf1ec 100%);
-  background-attachment: fixed;
 }
-
+/* Full-viewport background: a soft blue wash up top fading to white, echoing the
+   reference hero's pale-blue gradient. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, var(--blue-200) 0%, var(--blue-50) 34%, #ffffff 72%);
+}
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
-
 a {
-  color: var(--violet-deep);
+  color: var(--accent);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
 }
-
 h1 {
-  font-size: 1.7rem;
-  letter-spacing: -0.01em;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 h2 {
   font-size: 1.05rem;
+  letter-spacing: -0.01em;
 }
 
 /* --- Layout containers --- */
-.page,
-.auth-page {
+.page {
   width: 100%;
   max-width: 42rem;
   margin: 0 auto;
-  padding: 2rem 1.25rem 3rem;
+  /* top/bottom = 1.1rem to match the gap between cards; sides keep 1.25rem */
+  padding: 1.1rem 1.25rem;
+}
+/* Pages that lay content out in columns get more room on wider screens. */
+@media (min-width: 48rem) {
+  .page-wide {
+    max-width: 60rem;
+  }
 }
 
-.auth-page {
-  max-width: 26rem;
-  margin-top: 3.5rem;
-  background: var(--glass-strong);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 2rem 1.75rem 2.25rem;
+/* Trip detail: a grid of content cards. One column on mobile; a balanced
+   2-column grid on md+ (Expenses | Balances / People+Share spans both). */
+.trip-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+  margin-top: 1.1rem;
+}
+.trip-grid .card {
+  margin-top: 0; /* spacing handled by the grid gap */
+}
+@media (min-width: 48rem) {
+  .trip-grid {
+    grid-template-columns: 1fr 1fr;
+    /* stretch: paired cards share the taller one's height */
+    align-items: stretch;
+  }
+  .trip-grid .span-2 {
+    grid-column: 1 / -1;
+  }
 }
 
 .page-head {
@@ -105,10 +128,8 @@ h2 {
 .trip-section {
   margin-top: 1.5rem;
 }
-.trip-section h2 {
-  color: var(--ink-soft);
-  margin-bottom: 0.6rem;
-  font-weight: 700;
+.page-head + .trip-section {
+  margin-top: 0.7rem;
 }
 
 /* --- Forms --- */
@@ -119,7 +140,13 @@ h2 {
   gap: 0.85rem;
   margin: 1.25rem 0;
 }
-
+.expense-form {
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
 label {
   display: flex;
   flex-direction: column;
@@ -128,7 +155,6 @@ label {
   color: var(--ink-soft);
   font-weight: 600;
 }
-
 input,
 select {
   padding: 0.6rem 0.75rem;
@@ -137,202 +163,51 @@ select {
   font-size: 1rem;
   font-family: inherit;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 input:focus,
 select:focus {
   outline: none;
-  border-color: var(--violet);
-  box-shadow: 0 0 0 3px rgba(124, 108, 240, 0.18);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.12);
 }
 
-/* --- Buttons --- */
-button {
-  padding: 0.6rem 1.15rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--accent-grad);
-  color: #fff;
-  font-size: 1rem;
-  font-family: inherit;
-  font-weight: 700;
+/* Common Select: native <select> with our own chevron (platform arrow hidden). */
+.select {
+  position: relative;
+  display: block;
+}
+.select select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s;
 }
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 22px -8px rgba(124, 108, 240, 0.5);
-}
-button:active {
-  transform: translateY(0);
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-  transform: none;
-  box-shadow: none;
+.select::after {
+  content: "";
+  position: absolute;
+  right: 0.95rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--ink-soft);
+  border-bottom: 2px solid var(--ink-soft);
+  border-radius: 1px;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
 }
 
-.form-error {
-  color: var(--neg);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.form-success {
-  color: var(--pos);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.auth-links {
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-}
-.muted {
-  color: var(--ink-soft);
-  margin-top: 0.4rem;
-  font-size: 0.92rem;
-}
-
-/* --- Header --- */
-.app-header {
+.field-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.4rem;
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  gap: 0.75rem;
 }
-.app-brand {
-  font-weight: 800;
-  font-size: 1.15rem;
-  background: var(--accent-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  letter-spacing: -0.01em;
-}
-.app-header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-}
-.app-user {
-  font-size: 0.88rem;
-  color: var(--ink-soft);
-}
-.app-header button {
-  background: rgba(124, 108, 240, 0.12);
-  color: var(--violet-deep);
-  box-shadow: none;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.9rem;
-}
-.app-header button:hover {
-  background: rgba(124, 108, 240, 0.2);
-  transform: none;
-  box-shadow: none;
+.field-row label {
+  flex: 1;
 }
 
-/* --- Cards: trips, expenses, balances --- */
-.empty-state {
-  margin-top: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-  background: var(--glass);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 2.5rem 1.5rem;
-}
-
-.trip-list,
-.expense-list,
-.balance-list,
-.member-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.trip-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem 1.15rem;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  color: inherit;
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
-}
-.trip-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  text-decoration: none;
-}
-.trip-card-name {
-  font-weight: 700;
-  font-size: 1.05rem;
-}
-.trip-card-meta {
-  font-size: 0.85rem;
-  color: var(--ink-soft);
-}
-
-.member-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.85rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: var(--radius-sm);
-}
-
-.tag {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 700;
-  color: var(--violet-deep);
-  background: rgba(124, 108, 240, 0.14);
-  border-radius: 999px;
-  padding: 0.1rem 0.5rem;
-}
-
-/* --- Share --- */
-.share {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-}
-.share-url {
-  flex: 1 1 16rem;
-  font-size: 0.85rem;
-  color: var(--ink-soft);
-  background: rgba(255, 255, 255, 0.6);
-}
-.toast {
-  color: var(--pos);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-/* --- Ghost + expense forms --- */
+/* Ghost form (inline add-a-person / add-a-name row). */
 .ghost-form {
   display: flex;
   flex-wrap: wrap;
@@ -347,31 +222,15 @@ button:disabled {
   flex-basis: 100%;
 }
 
-.expense-form {
-  padding: 1.25rem;
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-}
-.field-row {
-  display: flex;
-  gap: 0.75rem;
-}
-.field-row label {
-  flex: 1;
-}
-
+/* Split selector (who's included / custom amounts). */
 .split-set {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 0.85rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.1rem;
-  background: rgba(255, 255, 255, 0.4);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
 }
 .split-set legend {
   font-size: 0.78rem;
@@ -388,215 +247,184 @@ button:disabled {
 }
 .check input {
   width: auto;
-  accent-color: var(--violet);
+  accent-color: var(--accent);
 }
-
-/* --- Expenses list --- */
-.expense-row {
-  padding: 0.8rem 1rem;
-  background: var(--glass);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
+.split-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8rem;
 }
-.expense-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-weight: 700;
-  font-size: 1.02rem;
+.share-row {
+  flex: 1 1 100% !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.6rem !important;
 }
-.expense-amount {
-  color: var(--violet-deep);
-  font-variant-numeric: tabular-nums;
+.share-name {
+  flex: 1;
+  color: var(--ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.expense-meta {
+.share-row input {
+  width: 8rem;
+  flex: 0 0 auto;
+  text-align: right;
+}
+.split-remaining {
+  flex: 1 1 100%;
+  margin: 0.15rem 0 0;
   font-size: 0.82rem;
-  color: var(--ink-soft);
-  margin-top: 0.15rem;
-}
-.expense-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 0.5rem;
-}
-.expense-actions a {
-  font-size: 0.85rem;
   font-weight: 600;
-}
-
-/* --- Balances --- */
-.balance-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.65rem 1rem;
-  background: var(--glass);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  font-weight: 600;
-}
-.balance-amount {
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.05rem;
-}
-.balance-amount.pos {
-  color: var(--pos);
-}
-.balance-amount.neg {
   color: var(--neg);
 }
-.balance-amount.zero {
-  color: var(--ink-soft);
+.split-remaining.ok {
+  color: var(--pos);
 }
 
-/* --- Danger / destructive --- */
+/* --- Buttons: solid black pill, white text — the reference's primary action --- */
+button {
+  padding: 0.6rem 1.3rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+button:hover {
+  opacity: 0.85;
+}
+button:active {
+  transform: translateY(1px);
+  opacity: 0.8;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Compact button variant (section actions). */
+.btn-sm {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.88rem;
+}
+/* Inline text button (identity switch, "not now") — looks like a link. */
+.link-btn {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-btn:hover {
+  text-decoration: underline;
+  transform: none;
+  box-shadow: none;
+  background: none;
+}
+/* Destructive action (Close trip): grey pill, red label. */
 .link-danger {
-  background: rgba(224, 106, 139, 0.12);
+  background: var(--surface-soft);
   color: var(--neg);
   box-shadow: none;
   padding: 0.4rem 0.85rem;
   font-size: 0.9rem;
 }
 .link-danger:hover {
-  background: rgba(224, 106, 139, 0.2);
+  background: #f1e4e2;
   transform: none;
   box-shadow: none;
 }
-.danger-zone {
-  border-top: 1px solid var(--line);
-  padding-top: 1.25rem;
-  margin-top: 2rem;
-}
-
-/* --- New-trip modal dialog --- */
-.modal {
-  width: min(92vw, 26rem);
-  margin: auto; /* re-center: the global `* { margin: 0 }` reset removes the UA centering */
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: var(--radius);
-  padding: 1.5rem 1.5rem 1.75rem;
-  background: var(--glass-strong);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 24px 60px -20px rgba(80, 60, 160, 0.45);
-  color: var(--ink);
-}
-.modal::backdrop {
-  background: rgba(52, 48, 90, 0.28);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-}
-.modal[open] {
-  animation: modal-pop 0.16s ease-out;
-}
-@keyframes modal-pop {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.modal-close {
+/* Icon-only button (edit / delete expense). */
+.icon-btn {
   background: transparent;
-  color: var(--ink-soft);
+  color: inherit;
   box-shadow: none;
-  font-size: 1.4rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 1rem;
   line-height: 1;
-  padding: 0.1rem 0.5rem;
+  border-radius: 0.5rem;
 }
-.modal-close:hover {
-  background: rgba(124, 108, 240, 0.12);
+.icon-btn:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
   transform: none;
   box-shadow: none;
 }
 
-/* --- Receipt photo upload --- */
-.photo-details {
-  margin-top: 1rem;
+/* --- Text helpers --- */
+.muted {
+  color: var(--ink-soft);
+  margin-top: 0.4rem;
+  font-size: 0.92rem;
 }
-.photo-details summary {
-  cursor: pointer;
-  color: var(--violet-deep);
+.form-error {
+  color: var(--neg);
   font-size: 0.9rem;
   font-weight: 600;
-  list-style: none;
 }
-.photo-details summary::before {
-  content: "📷 ";
-}
-.photo-upload {
-  margin-top: 0.7rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
+.auth-links {
   font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+.toast {
+  color: var(--pos);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
-/* --- Trip detail: legacy-inspired cards, avatars, rows (aurora palette) --- */
+/* --- Cards --- */
 .card {
-  background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: #ffffff;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 1.25rem 1.35rem;
   margin-top: 1.1rem;
 }
 
-.back-link {
-  display: inline-block;
-  margin: 0.25rem 0 0.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--violet-deep);
+/* Section labels — uppercase monospace eyebrows, the reference's signature. */
+.section-title,
+.trip-section h2 {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
 }
-
 .section-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--ink-soft);
   margin-bottom: 0.8rem;
 }
-
-.trip-header {
+.trip-section h2 {
+  margin-bottom: 0.7rem;
+}
+/* Section header with an action button on the right. */
+.card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
 }
-.trip-header h1 {
-  margin: 0;
-}
-.trip-total {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  line-height: 1.25;
-}
-.trip-total strong {
-  font-size: 1.3rem;
-  color: var(--violet-deep);
+.card-head .section-title {
+  margin-bottom: 0;
 }
 
-/* Colored initials avatars */
+/* Colored initials avatar (background color is set inline, per name). */
 .avatar {
   width: 2.1rem;
   height: 2.1rem;
@@ -621,31 +449,241 @@ button:disabled {
   font-size: 1.05rem;
 }
 
-.member-chips {
+/* --- Home hero --- */
+.hero {
+  margin: 1.5rem 0 2rem;
+  padding: 2.6rem 1.5rem;
+  text-align: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem 1rem;
-}
-.member-chip {
-  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.9rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.hero-eyebrow {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  max-width: 16ch;
+}
+.hero p {
+  max-width: 46ch;
+}
+/* Direct child only: the CTA button (the hero also holds the New-trip <dialog>). */
+.hero > button {
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  padding: 0.7rem 1.6rem;
 }
 
-/* Balances: avatar + name + net, dashed separators (override earlier glass-card rule) */
+/* --- Dashboard: recent-trip cards --- */
+.trip-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.8rem;
+}
+.trip-list li {
+  position: relative;
+}
+.trip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem 1.15rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.trip-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+}
+.trip-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.trip-card-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-badge {
+  flex: 0 0 auto;
+  font-family: var(--font-mono), ui-monospace, "SF Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+}
+.trip-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+/* Little "remove from list" button, revealed on hover of a recent-trip card. */
+.trip-forget {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink-soft);
+  box-shadow: none;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.trip-list li:hover .trip-forget {
+  opacity: 1;
+}
+.trip-forget:hover {
+  background: #fff;
+  color: var(--accent);
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Trip detail: header --- */
+.trip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.trip-header h1 {
+  margin: 0;
+}
+.trip-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.25;
+}
+.trip-total strong {
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+.back-link {
+  display: inline-block;
+  /* no margin — the page's 1.1rem top padding and the next card's 1.1rem
+     margin-top set the surrounding gaps, keeping the vertical rhythm uniform */
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* --- Expenses list --- */
+.expense-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.expense {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+.expense .grow {
+  flex: 1;
+  min-width: 0;
+}
+.expense .desc {
+  font-weight: 700;
+}
+.expense .sub {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.expense .amt {
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.thumb {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  display: block;
+}
+.expense-ops {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+/* Empty state (no expenses yet). */
+.empty {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  color: var(--ink-soft);
+}
+.empty .big {
+  display: block;
+  font-size: 2.3rem;
+  margin-bottom: 0.4rem;
+}
+.empty-cta {
+  margin-top: 1rem;
+}
+
+/* --- Balances --- */
+.balances-card {
+  display: flex;
+  flex-direction: column;
+}
 .balance-list {
-  gap: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
 }
 .balance-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 0.6rem 0;
-  background: transparent;
-  border: none;
   border-bottom: 1px dashed var(--line);
-  border-radius: 0;
-  box-shadow: none;
   font-weight: 600;
 }
 .balance-row:last-child {
@@ -665,68 +703,354 @@ button:disabled {
   color: var(--neg);
   font-weight: 800;
 }
-
-/* Expense rows: payer avatar + description/sub + amount + thumb + edit/delete */
-.expense {
+/* "All settled" summary: pink like the 💖 title icon, centered in the card. */
+.all-settled {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.5);
-}
-.expense .grow {
-  flex: 1;
-  min-width: 0;
-}
-.expense .desc {
+  justify-content: center;
+  text-align: center;
+  color: var(--settled);
   font-weight: 700;
 }
-.expense .sub {
-  font-size: 0.8rem;
-  color: var(--ink-soft);
+/* Desktop: the card stretches to match Expenses, so center the message against
+   the FULL card height by floating the title out of flow. */
+@media (min-width: 48rem) {
+  .balances-card:has(.all-settled) {
+    position: relative;
+  }
+  .balances-card:has(.all-settled) .section-title {
+    position: absolute;
+    top: 1.25rem; /* match .card padding-top */
+    left: 1.35rem; /* match .card padding-left */
+    margin: 0;
+  }
 }
-.expense .amt {
-  font-weight: 800;
-  white-space: nowrap;
-  color: var(--violet-deep);
-  font-variant-numeric: tabular-nums;
+
+/* --- People roster --- */
+.people-list {
+  display: flex;
+  flex-direction: column;
 }
-.thumb {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.5rem;
-  object-fit: cover;
-  display: block;
-}
-.expense-ops {
+.people-row {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed var(--line);
+  font-weight: 600;
 }
-.icon-btn {
-  background: transparent;
-  color: inherit;
+/* Sit the roster flush in its flex cell so gaps to neighbours stay even. */
+.people-row:first-child {
+  padding-top: 0;
+}
+.people-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0.25rem;
+}
+.people-row .grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.people-row.is-you .grow {
+  color: var(--accent);
+}
+/* The "you" role — a small monospace pill. */
+.member-role {
+  flex: 0 0 auto;
+  font-family: var(--font-mono), ui-monospace, "SF Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem;
+  white-space: nowrap;
+}
+/* "You're X · Not you?" line above the roster. */
+.whoami {
+  font-size: 0.9rem;
+}
+
+/* People + Share share one card: roster left, invite right, divided by a rule
+   (horizontal when stacked, vertical once there's room). Each column uses a
+   single flex gap for an even vertical rhythm. */
+.people-invite {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+}
+.pi-people,
+.pi-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.pi-people > *,
+.pi-invite > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.people-invite .pi-invite {
+  border-top: 1px dashed var(--line);
+  padding-top: 1.1rem;
+}
+@media (min-width: 34rem) {
+  .people-invite {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 1.6rem;
+    align-items: stretch;
+  }
+  .people-invite .pi-invite {
+    border-top: none;
+    border-left: 1px dashed var(--line);
+    padding-top: 0;
+    padding-left: 1.6rem;
+  }
+  /* Archived trips have no invite column — let People fill the card. */
+  .people-invite.people-only {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Identity picker in the "Who are you?" dialog: pill buttons need an even gap
+   between them (the roster's .people-list stays flush with its dashed dividers). */
+.modal .people-list {
+  gap: 0.4rem;
+}
+/* a little breathing room after the "Already added? Pick yourself:" label */
+.modal .whoami {
+  margin-bottom: 0.25rem; /* 4px */
+}
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
   box-shadow: none;
-  padding: 0.25rem 0.4rem;
-  font-size: 1rem;
-  line-height: 1;
-  border-radius: 0.5rem;
 }
-.icon-btn:hover {
-  background: rgba(124, 108, 240, 0.12);
+.pick-row:hover {
+  background: #ffffff;
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Share panel --- */
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.share-url {
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+}
+
+/* --- Close-trip card --- */
+/* `.card.danger-zone` (specificity 0,2,0) so the margin reset beats the later
+   `.section-title`/`.muted` margin rules — otherwise those add to the gap. */
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  /* margin-top inherited from .card (1.1rem) so the gap matches every other card */
+}
+.card.danger-zone > * {
+  margin: 0;
+}
+
+/* --- Modal dialog (New trip / Add expense / Who are you) --- */
+.modal {
+  position: relative; /* anchor for the corner close button */
+  width: min(92vw, 26rem);
+  margin: auto; /* the global `* { margin: 0 }` reset removes the UA centering */
+  padding: 1.35rem 1.5rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  text-align: left;
+}
+.modal-wide {
+  width: min(94vw, 30rem);
+}
+.modal::backdrop {
+  background: rgba(10, 10, 10, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal[open] {
+  animation: modal-pop 0.16s ease-out;
+}
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 2.5rem; /* keep the title clear of the close button */
+}
+.modal-head h2 {
+  margin-bottom: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+/* Compact the forms that sit inside a dialog (they drop standalone chrome). */
+.modal .auth-form {
+  gap: 0.7rem;
+  margin: 0.85rem 0 0;
+}
+.modal .expense-form {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+.modal .photo-upload {
+  margin-top: 1rem;
+}
+/* Circular close button hugging the dialog's top-right corner. */
+.modal-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  font-size: 0; /* hide the literal "×"; the cross is drawn below */
+  line-height: 1;
+  box-shadow: none;
+}
+/* The × is drawn as two centered bars for exact centering. */
+.modal-close::before,
+.modal-close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.85rem;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.modal-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.modal-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.modal-close:hover {
+  background: #ececec;
+  color: var(--ink);
   transform: none;
   box-shadow: none;
 }
-
-.empty {
-  text-align: center;
-  padding: 1.75rem 1rem;
-  color: var(--ink-soft);
+.modal-close:focus-visible {
+  outline: none;
+  background: #e4e4e4;
 }
-.empty .big {
-  display: block;
-  font-size: 2.3rem;
-  margin-bottom: 0.4rem;
+
+/* --- Add-expense: Manual / Scan-receipt --- */
+.seg {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding: 0.25rem;
+  background: var(--surface-soft);
+  border-radius: 999px;
+}
+.seg-btn {
+  flex: 1;
+  background: transparent;
+  color: var(--ink-soft);
+  box-shadow: none;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.seg-btn:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.04);
+}
+.seg-btn.active {
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.photo-upload {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+/* Receipt file picker: a dashed drop-zone box with a black pill "Choose file"
+   button, instead of the raw platform control. */
+.photo-upload input[type="file"] {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.photo-upload input[type="file"]:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+}
+.photo-upload input[type="file"]:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.photo-upload input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.14s ease;
+}
+.photo-upload input[type="file"]::file-selector-button:hover {
+  opacity: 0.85;
 }

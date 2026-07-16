@@ -1,0 +1,102 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ExpenseForm, { type MemberOption } from "./ExpenseForm";
+import { getMe } from "@/lib/recent-trips";
+import type { CurrencyCode } from "@/lib/currency";
+
+interface Scan {
+  receiptPath: string;
+  amount: string | null;
+  description: string | null;
+  expenseDate: string | null;
+}
+
+type Status = "idle" | "scanning" | "unreadable" | "error" | "ready";
+
+export default function AddFromPhoto({
+  publicId,
+  members,
+  currency,
+  today,
+  onSuccess,
+}: {
+  publicId: string;
+  members: MemberOption[];
+  currency: CurrencyCode;
+  today: string;
+  onSuccess?: () => void;
+}) {
+  const [status, setStatus] = useState<Status>("idle");
+  const [scan, setScan] = useState<Scan | null>(null);
+  const [error, setError] = useState("");
+  const [me, setMeState] = useState<number | null>(null);
+
+  useEffect(() => setMeState(getMe(publicId)), [publicId]);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setStatus("scanning");
+    setError("");
+
+    const fd = new FormData();
+    fd.append("receipt", file);
+    fd.append("publicId", publicId);
+
+    try {
+      const res = await fetch("/api/expenses/from-photo", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Upload failed");
+        setStatus("error");
+        return;
+      }
+      if (!data.readable) {
+        setStatus("unreadable");
+        return;
+      }
+      setScan(data as Scan);
+      setStatus("ready");
+    } catch {
+      setError("Upload failed");
+      setStatus("error");
+    }
+  }
+
+  if (status === "ready" && scan) {
+    return (
+      <div>
+        <p className="muted">Review the details, choose who paid, and save.</p>
+        <ExpenseForm
+          publicId={publicId}
+          members={members}
+          currency={currency}
+          today={today}
+          defaultPayerId={me}
+          onSuccess={onSuccess}
+          prefill={{
+            description: scan.description ?? "",
+            amount: scan.amount ?? "",
+            expenseDate: scan.expenseDate ?? today,
+            photoPath: scan.receiptPath,
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="photo-upload">
+      <label>
+        Scan a receipt photo
+        <input type="file" accept="image/*" onChange={onFile} disabled={status === "scanning"} />
+      </label>
+      {status === "scanning" && <p className="muted">Reading receipt…</p>}
+      {status === "unreadable" && (
+        <p className="form-error">Couldn&apos;t read that image — please re-upload a clearer photo.</p>
+      )}
+      {status === "error" && <p className="form-error">{error}</p>}
+    </div>
+  );
+}

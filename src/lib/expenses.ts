@@ -1,26 +1,43 @@
-// Expense creation + loading — spec R2, scenarios A & G.
+// Expense creation + loading — no-auth model: anyone with the trip link may
+// add/edit/delete expenses while the trip is open (archived = read-only).
 import Big from "big.js";
 import type { Client } from "@libsql/client";
 import { db } from "./db";
-import { decimalPlaces, type CurrencyCode } from "./currency";
-import { getTripForUser } from "./trips";
+import { decimalPlaces, formatAmount, type CurrencyCode } from "./currency";
+import { getTripById } from "./trips";
 
 /** A user-facing error (safe to show in the UI). */
 export class ExpenseError extends Error {}
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export interface CreateExpenseInput {
-  tripId: number;
-  description: string;
+export type SplitMode = "even" | "custom";
+
+/** One person's exact share in a custom split. */
+export interface ExpenseShareInput {
+  memberId: number; // trip_members.id
   amount: string; // decimal string from the form
-  expenseDate: string; // 'YYYY-MM-DD'
-  payerMemberId: number; // trip_members.id
-  includedMemberIds: number[]; // trip_members.id[]
+}
+
+interface ExpenseFields {
+  description: string;
+  amount: string;
+  expenseDate: string;
+  payerMemberId: number;
+  /** How to divide the total. Defaults to an even split. */
+  splitMode?: SplitMode;
+  /** Even split: the members the total is divided equally among. */
+  includedMemberIds: number[];
+  /** Custom split: each member's exact amount (must sum to the total). */
+  customShares?: ExpenseShareInput[];
+}
+
+export interface CreateExpenseInput extends ExpenseFields {
+  tripId: number;
   photoPath?: string | null;
 }
 
-/** Raw expense + its included member ids, for balance computation and display. */
+/** Raw expense + its shares, for balance computation and display. */
 export interface ExpenseWithShares {
   id: number;
   payerMemberId: number;
@@ -28,8 +45,10 @@ export interface ExpenseWithShares {
   description: string;
   expenseDate: string;
   photoPath: string | null;
-  createdByUserId: number;
+  /** All members in the split (payer aside). */
   includedMemberIds: number[];
+  /** memberId → exact amount for a custom split; null for an even split. */
+  customShares: Map<number, string> | null;
 }
 
 async function tripMemberIds(tripId: number, client: Client): Promise<Set<number>> {
@@ -40,12 +59,10 @@ async function tripMemberIds(tripId: number, client: Client): Promise<Set<number
   return new Set(res.rows.map((r) => Number(r.id)));
 }
 
-interface ExpenseFields {
-  description: string;
-  amount: string;
-  expenseDate: string;
-  payerMemberId: number;
-  includedMemberIds: number[];
+/** A single expense_shares row to persist: null amount = even (derived) split. */
+interface PreparedShare {
+  memberId: number;
+  amount: string | null;
 }
 
 /** Validate + normalize an expense's fields against its trip. Throws ExpenseError. */
@@ -54,7 +71,8 @@ async function prepareExpense(
   currency: CurrencyCode,
   input: ExpenseFields,
   client: Client,
-): Promise<{ amount: string; description: string; included: number[]; payerMemberId: number }> {
+): Promise<{ amount: string; description: string; shares: PreparedShare[]; payerMemberId: number }> {
+  const dp = decimalPlaces(currency);
   const description = input.description.trim();
   if (!description) throw new ExpenseError("Description is required");
   if (description.length > 200) throw new ExpenseError("Description is too long");
@@ -67,41 +85,69 @@ async function prepareExpense(
   } catch {
     throw new ExpenseError("Enter a valid amount");
   }
-  amount = amount.round(decimalPlaces(currency), Big.roundHalfUp);
+  amount = amount.round(dp, Big.roundHalfUp);
   if (amount.lte(0)) throw new ExpenseError("Amount must be greater than 0");
-
-  const included = [...new Set(input.includedMemberIds)];
-  if (included.length === 0) throw new ExpenseError("Choose at least one person to split with");
 
   const memberIds = await tripMemberIds(tripId, client);
   if (!memberIds.has(input.payerMemberId)) {
     throw new ExpenseError("Payer must be a trip member");
   }
-  for (const id of included) {
-    if (!memberIds.has(id)) throw new ExpenseError("Everyone in the split must be a trip member");
+
+  let shares: PreparedShare[];
+  if (input.splitMode === "custom") {
+    // Each person's exact amount; only positive shares count (0 = not in it).
+    const positive: { memberId: number; amount: Big }[] = [];
+    for (const s of input.customShares ?? []) {
+      if (!memberIds.has(s.memberId)) {
+        throw new ExpenseError("Everyone in the split must be a trip member");
+      }
+      let a: Big;
+      try {
+        a = new Big(s.amount || "0");
+      } catch {
+        throw new ExpenseError("Enter a valid amount for each person");
+      }
+      a = a.round(dp, Big.roundHalfUp);
+      if (a.lt(0)) throw new ExpenseError("A share can't be negative");
+      if (a.gt(0)) positive.push({ memberId: s.memberId, amount: a });
+    }
+    if (positive.length === 0) throw new ExpenseError("Enter an amount for at least one person");
+
+    const sum = positive.reduce((t, p) => t.plus(p.amount), new Big(0));
+    if (!sum.eq(amount)) {
+      throw new ExpenseError(
+        `The shares add up to ${formatAmount(sum, currency)}, but the total is ` +
+          `${formatAmount(amount, currency)}. Adjust them to match.`,
+      );
+    }
+    shares = positive.map((p) => ({ memberId: p.memberId, amount: p.amount.toString() }));
+  } else {
+    const included = [...new Set(input.includedMemberIds)];
+    if (included.length === 0) throw new ExpenseError("Choose at least one person to split with");
+    for (const id of included) {
+      if (!memberIds.has(id)) throw new ExpenseError("Everyone in the split must be a trip member");
+    }
+    shares = included.map((id) => ({ memberId: id, amount: null }));
   }
 
-  return { amount: amount.toString(), description, included, payerMemberId: input.payerMemberId };
+  return { amount: amount.toString(), description, shares, payerMemberId: input.payerMemberId };
 }
 
 interface ExpenseContext {
   tripId: number;
   currency: CurrencyCode;
   status: "open" | "closed";
-  creatorUserId: number;
-  payerUserId: number | null;
 }
 
-/** Load a single expense's trip + payer context for authz, or null if missing. */
+/** Load a single expense's trip context, or null if missing. */
 async function getExpenseContext(
   expenseId: number,
   client: Client,
 ): Promise<ExpenseContext | null> {
   const res = await client.execute({
-    sql: `SELECT e.trip_id, t.currency, t.status, t.creator_user_id, pm.user_id AS payer_user_id
+    sql: `SELECT e.trip_id, t.currency, t.status
             FROM expenses e
             JOIN trips t ON t.id = e.trip_id
-            JOIN trip_members pm ON pm.id = e.payer_member_id
            WHERE e.id = ?`,
     args: [expenseId],
   });
@@ -111,28 +157,22 @@ async function getExpenseContext(
     tripId: Number(r.trip_id),
     currency: r.currency as CurrencyCode,
     status: r.status as "open" | "closed",
-    creatorUserId: Number(r.creator_user_id),
-    payerUserId: r.payer_user_id == null ? null : Number(r.payer_user_id),
   };
 }
 
-/** R5: only the original payer (if registered) or the trip creator may edit/delete. */
-function canModify(ctx: ExpenseContext, userId: number): boolean {
-  return ctx.creatorUserId === userId || ctx.payerUserId === userId;
-}
-
 /**
- * Record an expense (R2): equal split among the included set, payer independent
- * of that set (may be excluded — scenario G). Inserts the Expense + one
- * ExpenseShare per included member in a single transaction. Returns the id.
+ * Record an expense. The split is either even (equal share of the total among
+ * the included set) or custom (each member's exact amount, summing to the
+ * total). Payer is independent of the split (may be excluded). Inserts the
+ * Expense + one ExpenseShare per included member in a single transaction.
+ * Returns the id.
  */
 export async function createExpense(
   input: CreateExpenseInput,
-  actingUserId: number,
   client: Client = db(),
 ): Promise<number> {
-  const trip = await getTripForUser(input.tripId, actingUserId, client);
-  if (!trip) throw new ExpenseError("You're not a member of this trip");
+  const trip = await getTripById(input.tripId, client);
+  if (!trip) throw new ExpenseError("Trip not found");
   if (trip.status === "closed") throw new ExpenseError("This trip is archived");
 
   const p = await prepareExpense(input.tripId, trip.currency, input, client);
@@ -141,8 +181,8 @@ export async function createExpense(
   try {
     const exp = await tx.execute({
       sql: `INSERT INTO expenses
-              (trip_id, payer_member_id, amount, description, expense_date, photo_path, created_by_user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+              (trip_id, payer_member_id, amount, description, expense_date, photo_path)
+            VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
       args: [
         input.tripId,
         p.payerMemberId,
@@ -150,14 +190,13 @@ export async function createExpense(
         p.description,
         input.expenseDate,
         input.photoPath ?? null,
-        actingUserId,
       ],
     });
     const expenseId = Number(exp.rows[0].id);
-    for (const memberId of p.included) {
+    for (const s of p.shares) {
       await tx.execute({
-        sql: "INSERT INTO expense_shares (expense_id, member_id) VALUES (?, ?)",
-        args: [expenseId, memberId],
+        sql: "INSERT INTO expense_shares (expense_id, member_id, share_amount) VALUES (?, ?, ?)",
+        args: [expenseId, s.memberId, s.amount],
       });
     }
     await tx.commit();
@@ -168,18 +207,14 @@ export async function createExpense(
   }
 }
 
-/** Edit an existing expense (R5). Only the payer or trip creator may do so. */
+/** Edit an existing expense. Allowed for anyone while the trip is open. */
 export async function updateExpense(
   expenseId: number,
   input: ExpenseFields,
-  actingUserId: number,
   client: Client = db(),
 ): Promise<number> {
   const ctx = await getExpenseContext(expenseId, client);
   if (!ctx) throw new ExpenseError("Expense not found");
-  if (!canModify(ctx, actingUserId)) {
-    throw new ExpenseError("Only the payer or the trip creator can edit this expense");
-  }
   if (ctx.status === "closed") throw new ExpenseError("This trip is archived");
 
   const p = await prepareExpense(ctx.tripId, ctx.currency, input, client);
@@ -193,10 +228,10 @@ export async function updateExpense(
       args: [p.payerMemberId, p.amount, p.description, input.expenseDate, expenseId],
     });
     await tx.execute({ sql: "DELETE FROM expense_shares WHERE expense_id = ?", args: [expenseId] });
-    for (const memberId of p.included) {
+    for (const s of p.shares) {
       await tx.execute({
-        sql: "INSERT INTO expense_shares (expense_id, member_id) VALUES (?, ?)",
-        args: [expenseId, memberId],
+        sql: "INSERT INTO expense_shares (expense_id, member_id, share_amount) VALUES (?, ?, ?)",
+        args: [expenseId, s.memberId, s.amount],
       });
     }
     await tx.commit();
@@ -207,17 +242,10 @@ export async function updateExpense(
   }
 }
 
-/** Delete an expense (R5). Only the payer or trip creator may do so. Returns the trip id. */
-export async function deleteExpense(
-  expenseId: number,
-  actingUserId: number,
-  client: Client = db(),
-): Promise<number> {
+/** Delete an expense. Allowed for anyone while the trip is open. Returns the trip id. */
+export async function deleteExpense(expenseId: number, client: Client = db()): Promise<number> {
   const ctx = await getExpenseContext(expenseId, client);
   if (!ctx) throw new ExpenseError("Expense not found");
-  if (!canModify(ctx, actingUserId)) {
-    throw new ExpenseError("Only the payer or the trip creator can delete this expense");
-  }
   if (ctx.status === "closed") throw new ExpenseError("This trip is archived");
 
   const tx = await client.transaction("write");
@@ -243,13 +271,13 @@ export async function getTripExpenses(
 ): Promise<ExpenseWithShares[]> {
   const [expenses, shares] = await Promise.all([
     client.execute({
-      sql: `SELECT id, payer_member_id, amount, description, expense_date, photo_path, created_by_user_id
+      sql: `SELECT id, payer_member_id, amount, description, expense_date, photo_path
               FROM expenses WHERE trip_id = ?
              ORDER BY expense_date DESC, id DESC`,
       args: [tripId],
     }),
     client.execute({
-      sql: `SELECT es.expense_id, es.member_id
+      sql: `SELECT es.expense_id, es.member_id, es.share_amount
               FROM expense_shares es
               JOIN expenses e ON e.id = es.expense_id
              WHERE e.trip_id = ?`,
@@ -257,22 +285,33 @@ export async function getTripExpenses(
     }),
   ]);
 
-  const sharesByExpense = new Map<number, number[]>();
+  // Per expense: the member ids in the split, plus any explicit custom amounts.
+  const sharesByExpense = new Map<number, { memberId: number; amount: string | null }[]>();
   for (const row of shares.rows) {
     const eid = Number(row.expense_id);
     const list = sharesByExpense.get(eid) ?? [];
-    list.push(Number(row.member_id));
+    list.push({
+      memberId: Number(row.member_id),
+      amount: row.share_amount == null ? null : String(row.share_amount),
+    });
     sharesByExpense.set(eid, list);
   }
 
-  return expenses.rows.map((r) => ({
-    id: Number(r.id),
-    payerMemberId: Number(r.payer_member_id),
-    amount: String(r.amount),
-    description: String(r.description),
-    expenseDate: String(r.expense_date),
-    photoPath: (r.photo_path as string | null) ?? null,
-    createdByUserId: Number(r.created_by_user_id),
-    includedMemberIds: sharesByExpense.get(Number(r.id)) ?? [],
-  }));
+  return expenses.rows.map((r) => {
+    const rows = sharesByExpense.get(Number(r.id)) ?? [];
+    // A custom split has explicit amounts; an even split has all-null amounts.
+    const custom = rows.some((s) => s.amount != null);
+    return {
+      id: Number(r.id),
+      payerMemberId: Number(r.payer_member_id),
+      amount: String(r.amount),
+      description: String(r.description),
+      expenseDate: String(r.expense_date),
+      photoPath: (r.photo_path as string | null) ?? null,
+      includedMemberIds: rows.map((s) => s.memberId),
+      customShares: custom
+        ? new Map(rows.filter((s) => s.amount != null).map((s) => [s.memberId, s.amount as string]))
+        : null,
+    };
+  });
 }

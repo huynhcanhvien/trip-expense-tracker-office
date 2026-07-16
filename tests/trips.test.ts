@@ -3,23 +3,17 @@ import type { Client } from "@libsql/client";
 import { makeTestDb, type TestDb } from "./helpers/testDb";
 import {
   createTrip,
-  getTripForUser,
-  listTripsForUser,
+  getTripByPublicId,
+  getTripById,
+  getTripSummaries,
   listTripMembers,
-  getInvitationToken,
-  getTripByInviteToken,
-  isMember,
   countExpenses,
-  addTripMember,
-  addGhostMember,
+  addParticipant,
   TripError,
 } from "../src/lib/trips";
-import { createUser } from "../src/lib/accounts";
 
 let testDb: TestDb;
 let client: Client;
-let creatorId: number;
-let outsiderId: number;
 
 beforeAll(async () => {
   testDb = await makeTestDb();
@@ -27,234 +21,140 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await client.execute("DELETE FROM invitation_tokens");
   await client.execute("DELETE FROM expense_shares");
   await client.execute("DELETE FROM expenses");
   await client.execute("DELETE FROM trip_members");
   await client.execute("DELETE FROM trips");
-  await client.execute("DELETE FROM users");
 });
 
 afterAll(() => testDb.cleanup());
 
-async function seedUsers() {
-  creatorId = (await createUser("creator@example.com", "password123", client)).id;
-  outsiderId = (await createUser("outsider@example.com", "password123", client)).id;
-}
-
 describe("createTrip", () => {
-  it("creates the trip, the creator membership, and one invitation token", async () => {
-    await seedUsers();
-    const tripId = await createTrip(
-      { name: "Tokyo 2026", currency: "JPY", dateStart: "2026-04-01", dateEnd: "2026-04-10" },
-      creatorId,
-      client,
-    );
+  it("creates the trip with a unique public_id and returns it", async () => {
+    const publicId = await createTrip({ name: "Tokyo 2026", currency: "JPY" }, client);
+    expect(publicId).toMatch(/^[A-Za-z0-9_-]{10,}$/);
 
-    const trip = await client.execute({ sql: "SELECT * FROM trips WHERE id = ?", args: [tripId] });
-    expect(trip.rows[0].name).toBe("Tokyo 2026");
-    expect(trip.rows[0].currency).toBe("JPY");
-    expect(trip.rows[0].status).toBe("open");
-    expect(trip.rows[0].creator_user_id).toBe(creatorId);
-
-    const members = await client.execute({
-      sql: "SELECT user_id FROM trip_members WHERE trip_id = ?",
-      args: [tripId],
-    });
-    expect(members.rows.map((r) => r.user_id)).toEqual([creatorId]);
-
-    const tokens = await client.execute({
-      sql: "SELECT token FROM invitation_tokens WHERE trip_id = ?",
-      args: [tripId],
-    });
-    expect(tokens.rows.length).toBe(1);
-    expect(String(tokens.rows[0].token).length).toBeGreaterThanOrEqual(40);
+    const trip = await getTripByPublicId(publicId, client);
+    expect(trip?.name).toBe("Tokyo 2026");
+    expect(trip?.currency).toBe("JPY");
+    expect(trip?.status).toBe("open");
   });
 
-  it("allows optional dates to be omitted", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Weekend", currency: "USD" }, creatorId, client);
-    const trip = await client.execute({ sql: "SELECT * FROM trips WHERE id = ?", args: [tripId] });
-    expect(trip.rows[0].date_start).toBeNull();
-    expect(trip.rows[0].date_end).toBeNull();
+  it("seeds any participant names given on the create form", async () => {
+    const publicId = await createTrip(
+      { name: "Roadtrip", currency: "USD", participants: ["  Alice  ", "Bob"] },
+      client,
+    );
+    const trip = (await getTripByPublicId(publicId, client))!;
+    const members = await listTripMembers(trip.id, client);
+    expect(members.map((m) => m.displayName)).toEqual(["Alice", "Bob"]);
+  });
+
+  it("creates a trip with no participants (added later on the trip page)", async () => {
+    const publicId = await createTrip({ name: "Solo", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
+    expect(await listTripMembers(trip.id, client)).toEqual([]);
   });
 
   it("rejects a missing name", async () => {
-    await seedUsers();
-    await expect(createTrip({ name: "  ", currency: "USD" }, creatorId, client)).rejects.toThrowError(
+    await expect(createTrip({ name: "  ", currency: "USD" }, client)).rejects.toThrowError(
       /name is required/i,
     );
-  });
-
-  it("rejects end date before start date", async () => {
-    await seedUsers();
-    await expect(
-      createTrip(
-        { name: "Bad dates", currency: "USD", dateStart: "2026-05-10", dateEnd: "2026-05-01" },
-        creatorId,
-        client,
-      ),
-    ).rejects.toThrowError(/before the start date/i);
   });
 
   it("rejects an unsupported currency", async () => {
-    await seedUsers();
     await expect(
       // @ts-expect-error deliberately passing an unsupported currency
-      createTrip({ name: "Nope", currency: "GBP" }, creatorId, client),
+      createTrip({ name: "Nope", currency: "GBP" }, client),
     ).rejects.toThrow(TripError);
   });
-});
 
-describe("getTripForUser", () => {
-  it("returns the trip for a member, null for a non-member", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    expect((await getTripForUser(tripId, creatorId, client))?.name).toBe("Trip");
-    expect(await getTripForUser(tripId, outsiderId, client)).toBeNull();
-  });
-
-  it("returns null for a non-existent trip", async () => {
-    await seedUsers();
-    expect(await getTripForUser(99999, creatorId, client)).toBeNull();
+  it("rejects duplicate participant names (case-insensitive)", async () => {
+    await expect(
+      createTrip({ name: "Trip", currency: "USD", participants: ["Alice", "alice"] }, client),
+    ).rejects.toThrowError(/unique/i);
   });
 });
 
-describe("listTripsForUser", () => {
-  it("lists only the user's trips with member counts", async () => {
-    await seedUsers();
-    const t1 = await createTrip({ name: "Mine A", currency: "USD" }, creatorId, client);
-    await createTrip({ name: "Mine B", currency: "EUR" }, creatorId, client);
-    // A trip the creator is NOT part of.
-    await createTrip({ name: "Not mine", currency: "CNY" }, outsiderId, client);
-    // Add the outsider to trip 1 → member count 2.
-    await client.execute({
-      sql: "INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)",
-      args: [t1, outsiderId],
-    });
-
-    const trips = await listTripsForUser(creatorId, client);
-    expect(trips.map((t) => t.name).sort()).toEqual(["Mine A", "Mine B"]);
-    expect(trips.find((t) => t.id === t1)!.memberCount).toBe(2);
+describe("getTripByPublicId / getTripById", () => {
+  it("resolves a trip by its public slug and by internal id", async () => {
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const byPublic = await getTripByPublicId(publicId, client);
+    expect(byPublic?.name).toBe("Trip");
+    const byId = await getTripById(byPublic!.id, client);
+    expect(byId?.public_id).toBe(publicId);
   });
 
-  it("separates active from archived by status", async () => {
-    await seedUsers();
-    const openId = await createTrip({ name: "Open", currency: "USD" }, creatorId, client);
-    const closedId = await createTrip({ name: "Closed", currency: "USD" }, creatorId, client);
-    await client.execute({
-      sql: "UPDATE trips SET status='closed', closed_at=datetime('now') WHERE id = ?",
-      args: [closedId],
-    });
-
-    const trips = await listTripsForUser(creatorId, client);
-    expect(trips.find((t) => t.id === openId)!.status).toBe("open");
-    expect(trips.find((t) => t.id === closedId)!.status).toBe("closed");
-  });
-
-  it("returns an empty array for a user with no trips", async () => {
-    await seedUsers();
-    expect(await listTripsForUser(outsiderId, client)).toEqual([]);
+  it("returns null for an unknown slug", async () => {
+    expect(await getTripByPublicId("does-not-exist", client)).toBeNull();
   });
 });
 
-describe("listTripMembers + getInvitationToken", () => {
-  it("lists the creator as a registered member and exposes the invite token", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
+describe("getTripSummaries", () => {
+  it("returns summaries with member counts, in the order requested", async () => {
+    const a = await createTrip({ name: "A", currency: "USD", participants: ["x", "y"] }, client);
+    const b = await createTrip({ name: "B", currency: "EUR" }, client);
 
-    const members = await listTripMembers(tripId, client);
-    expect(members).toHaveLength(1);
-    expect(members[0]).toMatchObject({
-      userId: creatorId,
-      isGhost: false,
-      displayName: "creator@example.com",
-    });
-
-    const token = await getInvitationToken(tripId, client);
-    expect(token).toBeTruthy();
-    expect(token!.length).toBeGreaterThanOrEqual(40);
+    const summaries = await getTripSummaries([b, a], client);
+    expect(summaries.map((s) => s.name)).toEqual(["B", "A"]);
+    expect(summaries.find((s) => s.public_id === a)!.memberCount).toBe(2);
+    expect(summaries.find((s) => s.public_id === b)!.memberCount).toBe(0);
   });
 
-  it("renders ghost members by their name", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    await client.execute({
-      sql: "INSERT INTO trip_members (trip_id, ghost_name) VALUES (?, ?)",
-      args: [tripId, "Grandma"],
-    });
+  it("silently drops unknown ids", async () => {
+    const a = await createTrip({ name: "A", currency: "USD" }, client);
+    const summaries = await getTripSummaries(["ghost", a], client);
+    expect(summaries.map((s) => s.public_id)).toEqual([a]);
+  });
 
-    const members = await listTripMembers(tripId, client);
-    const ghost = members.find((m) => m.isGhost);
-    expect(ghost).toMatchObject({ userId: null, isGhost: true, displayName: "Grandma" });
+  it("returns an empty array for no ids", async () => {
+    expect(await getTripSummaries([], client)).toEqual([]);
   });
 });
 
-describe("invitation accept (scenario F, R1)", () => {
-  it("resolves a trip from its invite token", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Invite Trip", currency: "USD" }, creatorId, client);
-    const token = (await getInvitationToken(tripId, client))!;
+describe("addParticipant", () => {
+  it("adds a participant by name (trimmed) and returns its id", async () => {
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
 
-    expect((await getTripByInviteToken(token, client))?.id).toBe(tripId);
-    expect(await getTripByInviteToken("bogus-token", client)).toBeNull();
-  });
-
-  it("addTripMember is idempotent — re-accepting never duplicates", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-
-    expect(await isMember(tripId, outsiderId, client)).toBe(false);
-    await addTripMember(tripId, outsiderId, client);
-    await addTripMember(tripId, outsiderId, client); // repeat
-    expect(await isMember(tripId, outsiderId, client)).toBe(true);
-
-    const members = await listTripMembers(tripId, client);
-    expect(members.filter((m) => m.userId === outsiderId)).toHaveLength(1);
-  });
-
-  it("counts expenses for the preview", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    expect(await countExpenses(tripId, client)).toBe(0);
-  });
-});
-
-describe("addGhostMember (R1 ghost path)", () => {
-  it("lets any member add a ghost, who appears as a guest", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    // Outsider joins, then adds a ghost (any member can).
-    await addTripMember(tripId, outsiderId, client);
-
-    await addGhostMember(tripId, "  Grandpa  ", outsiderId, client);
-    const members = await listTripMembers(tripId, client);
-    const ghost = members.find((m) => m.isGhost);
-    expect(ghost).toMatchObject({ userId: null, isGhost: true, displayName: "Grandpa" });
-  });
-
-  it("rejects a non-member", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    await expect(addGhostMember(tripId, "X", outsiderId, client)).rejects.toThrowError(
-      /not a member/i,
-    );
+    const id = await addParticipant(trip.id, "  Grandma  ", client);
+    const members = await listTripMembers(trip.id, client);
+    expect(members).toEqual([{ id, displayName: "Grandma" }]);
   });
 
   it("rejects an empty name", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    await expect(addGhostMember(tripId, "   ", creatorId, client)).rejects.toThrowError(
-      /name is required/i,
-    );
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
+    await expect(addParticipant(trip.id, "   ", client)).rejects.toThrowError(/name is required/i);
   });
 
   it("rejects adding to an archived trip", async () => {
-    await seedUsers();
-    const tripId = await createTrip({ name: "Trip", currency: "USD" }, creatorId, client);
-    await client.execute({ sql: "UPDATE trips SET status='closed' WHERE id = ?", args: [tripId] });
-    await expect(addGhostMember(tripId, "Late", creatorId, client)).rejects.toThrowError(
-      /archived/i,
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
+    await client.execute({ sql: "UPDATE trips SET status='closed' WHERE id = ?", args: [trip.id] });
+    await expect(addParticipant(trip.id, "Late", client)).rejects.toThrowError(/archived/i);
+  });
+
+  it("rejects a missing trip", async () => {
+    await expect(addParticipant(99999, "X", client)).rejects.toThrowError(/not found/i);
+  });
+
+  it("rejects a name already on the trip (case-insensitive)", async () => {
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
+    await addParticipant(trip.id, "Grandma", client);
+    await expect(addParticipant(trip.id, "  grandma  ", client)).rejects.toThrowError(
+      /already called/i,
     );
+    // A different name is still fine.
+    await expect(addParticipant(trip.id, "Grandpa", client)).resolves.toBeTypeOf("number");
+  });
+});
+
+describe("countExpenses", () => {
+  it("counts a trip's expenses", async () => {
+    const publicId = await createTrip({ name: "Trip", currency: "USD" }, client);
+    const trip = (await getTripByPublicId(publicId, client))!;
+    expect(await countExpenses(trip.id, client)).toBe(0);
   });
 });

@@ -18,13 +18,13 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/heif": "heif",
 };
 
-export interface UploadFile {
+interface UploadFile {
   buffer: Buffer;
   mimeType: string;
   originalName?: string;
 }
 
-export interface StoredFile {
+interface StoredFile {
   /** Public path stored on the expense, e.g. "/uploads/<uuid>.jpg". */
   path: string;
 }

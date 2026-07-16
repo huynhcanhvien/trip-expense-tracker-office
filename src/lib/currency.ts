@@ -4,21 +4,17 @@ import Big from "big.js";
 
 export type CurrencyCode = "USD" | "EUR" | "CNY" | "VND" | "JPY" | "KRW";
 
-/** Decimal places + a display locale for each supported currency. */
-export const CURRENCY_META: Record<CurrencyCode, { dp: number; locale: string; label: string }> = {
-  USD: { dp: 2, locale: "en-US", label: "US Dollar" },
-  EUR: { dp: 2, locale: "en-IE", label: "Euro" },
-  CNY: { dp: 2, locale: "zh-CN", label: "Chinese Yuan" },
-  VND: { dp: 0, locale: "vi-VN", label: "Vietnamese Đồng" },
-  JPY: { dp: 0, locale: "ja-JP", label: "Japanese Yen" },
-  KRW: { dp: 0, locale: "ko-KR", label: "South Korean Won" },
+/** Decimal places, a display locale, and the flag of the country using each currency. */
+export const CURRENCY_META: Record<CurrencyCode, { dp: number; locale: string; flag: string }> = {
+  USD: { dp: 2, locale: "en-US", flag: "🇺🇸" },
+  EUR: { dp: 2, locale: "en-IE", flag: "🇪🇺" },
+  CNY: { dp: 2, locale: "zh-CN", flag: "🇨🇳" },
+  VND: { dp: 0, locale: "vi-VN", flag: "🇻🇳" },
+  JPY: { dp: 0, locale: "ja-JP", flag: "🇯🇵" },
+  KRW: { dp: 0, locale: "ko-KR", flag: "🇰🇷" },
 };
 
 export const SUPPORTED_CURRENCIES = Object.keys(CURRENCY_META) as CurrencyCode[];
-
-export function isSupportedCurrency(value: string): value is CurrencyCode {
-  return Object.prototype.hasOwnProperty.call(CURRENCY_META, value);
-}
 
 /** Decimal places for a currency (USD/EUR/CNY → 2, VND/JPY/KRW → 0). */
 export function decimalPlaces(currency: CurrencyCode): number {

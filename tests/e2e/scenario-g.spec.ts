@@ -1,22 +1,20 @@
 import { test, expect } from "@playwright/test";
-import { seedVerifiedUser, login, createTripUI, addGhost, addExpense, uniq } from "./helpers";
+import { createTripUI, addPerson, addExpense, uniq } from "./helpers";
 
 // Scenario G: Alice pays $20 for Bob & Carol only (Alice excluded)
 // → Alice +$20, Bob -$10, Carol -$10.
 test("Scenario G: payer excluded from the split still gets credited", async ({ page }) => {
-  const alice = await seedVerifiedUser("grace");
-  await login(page, alice);
-
   await createTripUI(page, uniq("Trip G"), "USD");
-  await addGhost(page, "Bob");
-  await addGhost(page, "Carol");
+  await addPerson(page, "Alice");
+  await addPerson(page, "Bob");
+  await addPerson(page, "Carol");
 
   // Uncheck Alice (the payer) from the split.
   await addExpense(page, {
     description: "Coffee for Bob & Carol",
     amount: "20",
-    payer: alice.email,
-    exclude: [alice.email],
+    payer: "Alice",
+    exclude: ["Alice"],
   });
 
   await expect(page.locator(".balance-row .pos")).toHaveText("+$20.00");

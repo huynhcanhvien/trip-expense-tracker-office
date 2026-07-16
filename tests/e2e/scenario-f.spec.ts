@@ -1,38 +1,24 @@
 import { test, expect } from "@playwright/test";
-import { seedVerifiedUser, seedTrip, login, uniq } from "./helpers";
+import { seedTrip, uniq, TRIP_URL_RE } from "./helpers";
 
-// Scenario F: invitation preview + accept for a logged-in, not-yet-member user,
-// plus the already-member and invalid-token branches.
-test("Scenario F: logged-in non-member previews then accepts an invitation", async ({ page }) => {
-  const alice = await seedVerifiedUser("alice-f");
+// Scenario F (no-auth sharing): the trip URL is the invite. Anyone who opens the
+// shared link — with no account — sees the trip and can add expenses.
+test("Scenario F: opening a shared trip link shows the trip and lets you edit", async ({ page }) => {
   const tripName = uniq("Trip F");
-  const { tripId, token } = await seedTrip(alice.id, tripName);
+  const { publicId } = await seedTrip(tripName, ["Alice"]);
 
-  const bob = await seedVerifiedUser("bob-f");
-  await login(page, bob);
-
-  // Preview (name + member list + Accept), no expense details.
-  await page.goto(`/invite/${token}`);
+  // A brand-new visitor (fresh browser context, no login) opens the link.
+  await page.goto(`/trips/${publicId}`);
+  await expect(page).toHaveURL(TRIP_URL_RE);
   await expect(page.getByRole("heading", { name: new RegExp(tripName) })).toBeVisible();
-  await expect(page.getByText(alice.email)).toBeVisible();
-  const accept = page.getByRole("button", { name: /accept invitation/i });
-  await expect(accept).toBeVisible();
+  await expect(page.locator(".people-list")).toContainText("Alice");
 
-  // Accept → added and redirected to the trip.
-  await accept.click();
-  await page.waitForURL(new RegExp(`/trips/${tripId}$`));
-  await expect(page.locator(".member-chips")).toContainText(bob.email);
-
-  // Re-clicking the link as an existing member → straight to the trip (no double-add).
-  await page.goto(`/invite/${token}`);
-  await page.waitForURL(new RegExp(`/trips/${tripId}$`));
-  await expect(page.locator(".member-chips").getByText(bob.email)).toHaveCount(1);
+  // The visit is remembered locally, so the trip now shows on the home page.
+  await page.goto("/");
+  await expect(page.locator(".trip-list")).toContainText(tripName);
 });
 
-test("Scenario F: an invalid invite token shows a friendly error", async ({ page }) => {
-  const user = await seedVerifiedUser("frank");
-  await login(page, user);
-
-  await page.goto("/invite/not-a-real-token");
-  await expect(page.getByText(/invalid invitation/i)).toBeVisible();
+test("Scenario F: an unknown trip link shows the not-found page", async ({ page }) => {
+  const res = await page.goto("/trips/not-a-real-slug");
+  expect(res?.status()).toBe(404);
 });

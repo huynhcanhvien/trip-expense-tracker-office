@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedVerifiedUser, login, createTripUI, uniq } from "./helpers";
+import { createTripUI, addPerson, dismissWhoAreYou, uniq } from "./helpers";
 
 // Scenario C: capture an expense from a receipt photo. The OCR endpoint is mocked
 // (as the plan directs for CI) to exercise both the unreadable re-upload prompt
@@ -7,9 +7,9 @@ import { seedVerifiedUser, login, createTripUI, uniq } from "./helpers";
 test("Scenario C: receipt photo → re-upload prompt when unreadable, then review + save", async ({
   page,
 }) => {
-  const alice = await seedVerifiedUser("carol");
-  await login(page, alice);
   await createTripUI(page, uniq("Trip C"), "USD");
+  await addPerson(page, "Carol");
+  await dismissWhoAreYou(page);
 
   // Mock the OCR endpoint; toggled by `readable`.
   let readable = false;
@@ -20,7 +20,9 @@ test("Scenario C: receipt photo → re-upload prompt when unreadable, then revie
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
 
-  await page.getByText(/add from a receipt photo/i).click();
+  // Open the Add-expense dialog and switch to the receipt-scan tab.
+  await page.getByRole("button", { name: /new expense/i }).click();
+  await page.getByRole("button", { name: /scan receipt/i }).click();
 
   // Unreadable → re-upload prompt (scenario C).
   await page.getByLabel(/scan a receipt photo/i).setInputFiles({
@@ -38,12 +40,12 @@ test("Scenario C: receipt photo → re-upload prompt when unreadable, then revie
     buffer: Buffer.from("clear"),
   });
 
-  const review = page.locator(".photo-details form.expense-form");
+  const review = page.locator("dialog#add-expense-dialog form.expense-form");
   await expect(review.getByLabel("Amount")).toHaveValue("42.50");
   await expect(review.getByLabel("Description")).toHaveValue("Sushi");
   await expect(review.getByLabel("Paid by")).toHaveValue(""); // payer not pre-selected (R4)
 
-  await review.getByLabel("Paid by").selectOption({ label: alice.email });
+  await review.getByLabel("Paid by").selectOption({ label: "Carol" });
   await review.getByRole("button", { name: /add expense/i }).click();
 
   await expect(page.locator(".expense-list")).toContainText("Sushi");

@@ -1,15 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { seedVerifiedUser, login, uniq } from "./helpers";
+import { uniq, TRIP_URL_RE } from "./helpers";
 
-// Scenario D: user creates a new trip via the dashboard dialog and lands on its page.
+// Scenario D: user creates a new trip via the home dialog and lands on its page.
 test("Scenario D: create a trip via the New trip dialog → trip page shows name + currency", async ({
   page,
 }) => {
-  const user = await seedVerifiedUser("dave");
-  await login(page, user);
+  await page.goto("/");
 
   const name = uniq("Tokyo");
-  await page.getByRole("button", { name: "Create new trip" }).click();
+  await page.getByRole("button", { name: /create a trip/i }).first().click();
   const dialog = page.locator("dialog.modal[open]");
   await expect(dialog).toBeVisible();
 
@@ -17,24 +16,18 @@ test("Scenario D: create a trip via the New trip dialog → trip page shows name
   await dialog.getByLabel("Currency").selectOption("JPY");
   await dialog.getByRole("button", { name: /create trip/i }).click();
 
-  await page.waitForURL(/\/trips\/\d+$/);
+  await page.waitForURL(TRIP_URL_RE);
   await expect(page.getByRole("heading", { name })).toBeVisible();
-  await expect(page.getByText(/Japanese Yen/)).toBeVisible();
+  await expect(page.getByText(/JPY/)).toBeVisible();
 });
 
-test("Scenario D: end date before start date is rejected (dialog stays open)", async ({ page }) => {
-  const user = await seedVerifiedUser("dave2");
-  await login(page, user);
+test("Scenario D: a missing trip name is rejected (dialog stays open)", async ({ page }) => {
+  await page.goto("/");
 
-  await page.getByRole("button", { name: "Create new trip" }).click();
+  await page.getByRole("button", { name: /create a trip/i }).first().click();
   const dialog = page.locator("dialog.modal[open]");
 
-  await dialog.getByLabel("Trip name").fill(uniq("Bad Dates"));
-  await dialog.getByLabel("Currency").selectOption("USD");
-  await dialog.getByLabel(/start date/i).fill("2026-05-10");
-  await dialog.getByLabel(/end date/i).fill("2026-05-01");
+  // Submit with an empty name → HTML required validation keeps us in the dialog.
   await dialog.getByRole("button", { name: /create trip/i }).click();
-
-  await expect(dialog.locator("p.form-error")).toContainText(/before the start date/i);
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(dialog).toBeVisible(); // no navigation
 });

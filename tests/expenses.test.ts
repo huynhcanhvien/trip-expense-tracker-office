@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import type { Client } from "@libsql/client";
 import { makeTestDb, type TestDb } from "./helpers/testDb";
-import { createUser } from "../src/lib/accounts";
-import { createTrip, addTripMember, listTripMembers } from "../src/lib/trips";
+import { createTrip, getTripByPublicId, addParticipant, listTripMembers } from "../src/lib/trips";
 import {
   createExpense,
   updateExpense,
@@ -15,10 +14,7 @@ import Big from "big.js";
 let testDb: TestDb;
 let client: Client;
 
-// Members: Alice (creator), Bob, Carol — as trip_members.id
-let aliceUser: number;
-let bobUser: number;
-let carolUser: number;
+// Members: Alice, Bob, Carol — as trip_members.id
 let tripId: number;
 let alice: number;
 let bob: number;
@@ -30,7 +26,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  for (const t of ["expense_shares", "expenses", "invitation_tokens", "trip_members", "trips", "users"]) {
+  for (const t of ["expense_shares", "expenses", "trip_members", "trips"]) {
     await client.execute(`DELETE FROM ${t}`);
   }
 });
@@ -38,23 +34,21 @@ afterEach(async () => {
 afterAll(() => testDb.cleanup());
 
 async function seedTrip(currency: "USD" | "JPY" = "USD") {
-  aliceUser = (await createUser("alice@example.com", "password123", client)).id;
-  bobUser = (await createUser("bob@example.com", "password123", client)).id;
-  carolUser = (await createUser("carol@example.com", "password123", client)).id;
-  tripId = await createTrip({ name: "Trip", currency }, aliceUser, client);
-  await addTripMember(tripId, bobUser, client);
-  await addTripMember(tripId, carolUser, client);
-
+  const publicId = await createTrip(
+    { name: "Trip", currency, participants: ["Alice", "Bob", "Carol"] },
+    client,
+  );
+  const trip = (await getTripByPublicId(publicId, client))!;
+  tripId = trip.id;
   const members = await listTripMembers(tripId, client);
-  alice = members.find((m) => m.userId === aliceUser)!.id;
-  bob = members.find((m) => m.userId === bobUser)!.id;
-  carol = members.find((m) => m.userId === carolUser)!.id;
+  alice = members.find((m) => m.displayName === "Alice")!.id;
+  bob = members.find((m) => m.displayName === "Bob")!.id;
+  carol = members.find((m) => m.displayName === "Carol")!.id;
 }
 
 async function makeExpense(payerMember = alice, included = [alice, bob, carol]) {
   return createExpense(
     { tripId, description: "Dinner", amount: "60", expenseDate: "2026-07-01", payerMemberId: payerMember, includedMemberIds: included },
-    aliceUser,
     client,
   );
 }
@@ -71,7 +65,6 @@ describe("createExpense", () => {
         payerMemberId: alice,
         includedMemberIds: [alice, bob, carol],
       },
-      aliceUser,
       client,
     );
 
@@ -98,7 +91,6 @@ describe("createExpense", () => {
         payerMemberId: alice,
         includedMemberIds: [bob, carol],
       },
-      aliceUser,
       client,
     );
 
@@ -116,7 +108,6 @@ describe("createExpense", () => {
     await expect(
       createExpense(
         { tripId, description: "x", amount: "10", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [] },
-        aliceUser,
         client,
       ),
     ).rejects.toThrowError(/at least one/i);
@@ -127,7 +118,6 @@ describe("createExpense", () => {
     await expect(
       createExpense(
         { tripId, description: "x", amount: "0", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice] },
-        aliceUser,
         client,
       ),
     ).rejects.toThrowError(/greater than 0/i);
@@ -138,7 +128,6 @@ describe("createExpense", () => {
     await expect(
       createExpense(
         { tripId, description: "x", amount: "10", expenseDate: "2026-07-01", payerMemberId: 99999, includedMemberIds: [alice] },
-        aliceUser,
         client,
       ),
     ).rejects.toThrowError(/payer must be a trip member/i);
@@ -149,7 +138,6 @@ describe("createExpense", () => {
     await expect(
       createExpense(
         { tripId, description: "x", amount: "10", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice, 99999] },
-        aliceUser,
         client,
       ),
     ).rejects.toThrowError(/must be a trip member/i);
@@ -159,7 +147,6 @@ describe("createExpense", () => {
     await seedTrip("JPY");
     const id = await createExpense(
       { tripId, description: "Ramen", amount: "500.7", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice, bob] },
-      aliceUser,
       client,
     );
     const exp = await client.execute({ sql: "SELECT amount FROM expenses WHERE id = ?", args: [id] });
@@ -172,7 +159,6 @@ describe("createExpense", () => {
     await expect(
       createExpense(
         { tripId, description: "x", amount: "10", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice] },
-        aliceUser,
         client,
       ),
     ).rejects.toThrowError(/archived/i);
@@ -184,12 +170,10 @@ describe("getTripExpenses", () => {
     await seedTrip();
     await createExpense(
       { tripId, description: "Dinner", amount: "60", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice, bob, carol] },
-      aliceUser,
       client,
     );
     await createExpense(
       { tripId, description: "Coffee", amount: "20", expenseDate: "2026-07-02", payerMemberId: alice, includedMemberIds: [bob, carol] },
-      aliceUser,
       client,
     );
 
@@ -201,19 +185,17 @@ describe("getTripExpenses", () => {
   });
 });
 
-describe("T14: balances wired from stored expenses (R3)", () => {
+describe("balances wired from stored expenses (R3)", () => {
   it("Scenario A + G together → Alice +60, Bob -30, Carol -30, sum 0", async () => {
     await seedTrip();
     // A: $60 dinner split three ways (Alice paid).
     await createExpense(
       { tripId, description: "Dinner", amount: "60", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice, bob, carol] },
-      aliceUser,
       client,
     );
     // G: $20 for Bob & Carol only (Alice paid, excluded).
     await createExpense(
       { tripId, description: "Coffee", amount: "20", expenseDate: "2026-07-02", payerMemberId: alice, includedMemberIds: [bob, carol] },
-      aliceUser,
       client,
     );
 
@@ -238,15 +220,148 @@ describe("T14: balances wired from stored expenses (R3)", () => {
   });
 });
 
-describe("T15: edit/delete authz (R5)", () => {
-  it("the payer can edit their own expense", async () => {
+describe("custom split (per-person amounts)", () => {
+  it("stores each person's exact amount and reports a custom split", async () => {
     await seedTrip();
-    // Bob pays; Bob edits.
+    const id = await createExpense(
+      {
+        tripId,
+        description: "Dinner (uneven)",
+        amount: "60",
+        expenseDate: "2026-07-01",
+        payerMemberId: alice,
+        splitMode: "custom",
+        includedMemberIds: [],
+        customShares: [
+          { memberId: alice, amount: "10" },
+          { memberId: bob, amount: "20" },
+          { memberId: carol, amount: "30" },
+        ],
+      },
+      client,
+    );
+
+    const [exp] = await getTripExpenses(tripId, client);
+    expect(exp.id).toBe(id);
+    expect(exp.customShares).not.toBeNull();
+    expect(exp.customShares!.get(alice)).toBe("10");
+    expect(exp.customShares!.get(bob)).toBe("20");
+    expect(exp.customShares!.get(carol)).toBe("30");
+  });
+
+  it("debits each member their exact share in the balance", async () => {
+    await seedTrip();
+    await createExpense(
+      {
+        tripId,
+        description: "Dinner (uneven)",
+        amount: "60",
+        expenseDate: "2026-07-01",
+        payerMemberId: alice,
+        splitMode: "custom",
+        includedMemberIds: [],
+        customShares: [
+          { memberId: alice, amount: "10" },
+          { memberId: bob, amount: "20" },
+          { memberId: carol, amount: "30" },
+        ],
+      },
+      client,
+    );
+
+    const expenses = await getTripExpenses(tripId, client);
+    const net = computeBalances(
+      expenses.map((e) => ({
+        payerMemberId: e.payerMemberId,
+        amount: new Big(e.amount),
+        includedMemberIds: e.includedMemberIds,
+        customShares: e.customShares
+          ? new Map([...e.customShares].map(([k, v]) => [k, new Big(v)]))
+          : undefined,
+      })),
+      [alice, bob, carol],
+      2,
+    );
+    // Alice paid 60, owes 10 → +50; Bob −20; Carol −30.
+    expect(net.get(alice)!.toString()).toBe("50");
+    expect(net.get(bob)!.toString()).toBe("-20");
+    expect(net.get(carol)!.toString()).toBe("-30");
+  });
+
+  it("drops zero shares (a person with 0 isn't in the split)", async () => {
+    await seedTrip();
+    await createExpense(
+      {
+        tripId,
+        description: "Bob & Carol only",
+        amount: "50",
+        expenseDate: "2026-07-01",
+        payerMemberId: alice,
+        splitMode: "custom",
+        includedMemberIds: [],
+        customShares: [
+          { memberId: alice, amount: "0" },
+          { memberId: bob, amount: "20" },
+          { memberId: carol, amount: "30" },
+        ],
+      },
+      client,
+    );
+    const [exp] = await getTripExpenses(tripId, client);
+    expect(exp.includedMemberIds.sort()).toEqual([bob, carol].sort());
+    expect(exp.customShares!.has(alice)).toBe(false);
+  });
+
+  it("rejects shares that don't add up to the total", async () => {
+    await seedTrip();
+    await expect(
+      createExpense(
+        {
+          tripId,
+          description: "Off by a bit",
+          amount: "60",
+          expenseDate: "2026-07-01",
+          payerMemberId: alice,
+          splitMode: "custom",
+          includedMemberIds: [],
+          customShares: [
+            { memberId: alice, amount: "10" },
+            { memberId: bob, amount: "20" },
+            { memberId: carol, amount: "25" }, // sums to 55, not 60
+          ],
+        },
+        client,
+      ),
+    ).rejects.toThrowError(/add up|total/i);
+  });
+
+  it("rejects an all-zero custom split", async () => {
+    await seedTrip();
+    await expect(
+      createExpense(
+        {
+          tripId,
+          description: "Nothing",
+          amount: "10",
+          expenseDate: "2026-07-01",
+          payerMemberId: alice,
+          splitMode: "custom",
+          includedMemberIds: [],
+          customShares: [{ memberId: alice, amount: "0" }],
+        },
+        client,
+      ),
+    ).rejects.toThrowError(/at least one/i);
+  });
+});
+
+describe("edit / delete (no-auth: anyone with the link)", () => {
+  it("edits an expense's fields and split", async () => {
+    await seedTrip();
     const id = await makeExpense(bob, [alice, bob, carol]);
     await updateExpense(
       id,
       { description: "Lunch", amount: "30", expenseDate: "2026-07-03", payerMemberId: bob, includedMemberIds: [bob, carol] },
-      bobUser,
       client,
     );
     const list = await getTripExpenses(tripId, client);
@@ -254,40 +369,10 @@ describe("T15: edit/delete authz (R5)", () => {
     expect(list[0].includedMemberIds.sort()).toEqual([bob, carol].sort());
   });
 
-  it("the trip creator can edit anyone's expense", async () => {
-    await seedTrip();
-    const id = await makeExpense(bob, [alice, bob, carol]); // Bob paid
-    // Alice is the creator → allowed.
-    await updateExpense(
-      id,
-      { description: "Fixed", amount: "9", expenseDate: "2026-07-01", payerMemberId: bob, includedMemberIds: [alice] },
-      aliceUser,
-      client,
-    );
-    expect((await getTripExpenses(tripId, client))[0].description).toBe("Fixed");
-  });
-
-  it("a non-payer non-creator cannot edit or delete", async () => {
-    await seedTrip();
-    const id = await makeExpense(alice, [alice, bob, carol]); // Alice paid, Alice is creator
-    // Carol is neither payer nor creator.
-    await expect(
-      updateExpense(
-        id,
-        { description: "Hax", amount: "1", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice] },
-        carolUser,
-        client,
-      ),
-    ).rejects.toThrowError(/payer or the trip creator/i);
-    await expect(deleteExpense(id, carolUser, client)).rejects.toThrowError(
-      /payer or the trip creator/i,
-    );
-  });
-
   it("delete removes the expense and its shares", async () => {
     await seedTrip();
     const id = await makeExpense();
-    await deleteExpense(id, aliceUser, client);
+    await deleteExpense(id, client);
     expect(await getTripExpenses(tripId, client)).toHaveLength(0);
     const shares = await client.execute({
       sql: "SELECT COUNT(*) c FROM expense_shares WHERE expense_id = ?",
@@ -300,6 +385,13 @@ describe("T15: edit/delete authz (R5)", () => {
     await seedTrip();
     const id = await makeExpense();
     await client.execute({ sql: "UPDATE trips SET status='closed' WHERE id = ?", args: [tripId] });
-    await expect(deleteExpense(id, aliceUser, client)).rejects.toThrowError(/archived/i);
+    await expect(deleteExpense(id, client)).rejects.toThrowError(/archived/i);
+    await expect(
+      updateExpense(
+        id,
+        { description: "x", amount: "1", expenseDate: "2026-07-01", payerMemberId: alice, includedMemberIds: [alice] },
+        client,
+      ),
+    ).rejects.toThrowError(/archived/i);
   });
 });
