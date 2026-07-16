@@ -68,3 +68,6 @@ next-env.d.ts
 
 # macOS custom folder-icon junk
 Icon?
+
+# Claude Code machine-local settings
+.claude/settings.local.json
