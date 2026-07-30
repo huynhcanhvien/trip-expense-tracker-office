@@ -6,7 +6,7 @@ import Modal from "@/app/components/Modal";
 import SubmitButton from "@/app/components/SubmitButton";
 import FormError from "@/app/components/FormError";
 import { addParticipantAction, type TripFormState } from "@/app/trips/actions";
-import { getMe, setMe as persistMe, clearMe, rememberTrip } from "@/lib/recent-trips";
+import { getMe, setMe as persistMe, clearMe, rememberTrip, useMe } from "@/lib/recent-trips";
 
 const initial: TripFormState = {};
 
@@ -32,17 +32,17 @@ export default function PeoplePanel({
   members: Person[];
   open: boolean;
 }) {
-  const [me, setMeState] = useState<number | null>(null);
-  const [picking, setPicking] = useState(false);
+  // "You" is browser-local (localStorage), read reactively so claim/switch below
+  // re-render without local state.
+  const me = useMe(publicId);
+  // Open the picker on first mount if this browser hasn't claimed a participant
+  // yet (initialized lazily so we never setState from the mount effect).
+  const [picking, setPicking] = useState<boolean>(() => getMe(publicId) === null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  // Record the visit + load "you" once mounted (client-only state). If we don't
-  // know who you are yet, open the picker so you can add yourself first.
+  // Record the visit for the home page's recent-trips list.
   useEffect(() => {
     rememberTrip({ publicId, name, currency });
-    const current = getMe(publicId);
-    setMeState(current);
-    if (current === null) setPicking(true);
   }, [publicId, name, currency]);
 
   useEffect(() => {
@@ -54,13 +54,11 @@ export default function PeoplePanel({
 
   function claim(id: number) {
     persistMe(publicId, id);
-    setMeState(id);
     setPicking(false);
   }
 
   function switchIdentity() {
     clearMe(publicId);
-    setMeState(null);
     setPicking(true);
   }
 

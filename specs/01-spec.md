@@ -2,106 +2,115 @@
 
 ## 1. Purpose (one paragraph)
 
-A simple tool for a group on a trip to log shared expenses and see, at the end, a single net number per person — how much they owe or are owed (see R3). Avoids the awkward "wait, who paid for dinner Tuesday?" conversation. Beside manually input expense, this tool also has the capability to upload photos and calculate expense from that. This tool should also allows split inequally, as there might be some expenses that not included by all members. Avoid who owes who situation, instead give the overall expense for each people, with -{amount} for they should pay how much and +{amount} for they should receive how much.
+A simple, no-sign-up tool for a group on a trip to log shared expenses and see, at the end, a single net number per person — how much they owe or are owed (see R3). Avoids the awkward "wait, who paid for dinner Tuesday?" conversation. A trip lives at a shareable secret link; anyone with the link can view and edit it — no accounts, no login. Besides manually entering an expense, the tool can read a receipt photo and pre-fill the expense from it. Expenses can be split **evenly** among the people it covers, or by **custom** amounts when the split isn't equal (some expenses don't include everyone). We avoid the "who owes who" web of transactions; instead we show one overall figure per person: `-{amount}` = they should pay, `+{amount}` = they should receive.
 
 ## 2. Users
 
-Public users with accounts. A trip's data is visible only to its members.
+There are **no accounts**. A trip is reached through a non-guessable secret slug in its URL (`/trips/<publicId>`); knowing the link is the only credential. Anyone with the link can view the trip and edit it (add people, add/edit/delete expenses, close the trip). The link is the secret — treat sharing it as granting full access.
 
-Members of a trip can be either:
-- **Registered users** — have an account, can log in, can be invited via link.
-- **Ghost members** — added to a trip by name only by another member. Appear in splits and balances but cannot log in. (Claiming a ghost into a real account is out of scope for v1.)
+Within a trip, a **participant** is just a name. Everyone in the split — including the person who entered it — is a name-only participant; there is no "registered" vs "guest" distinction. Because the browser has no identity, each browser can optionally claim which participant is **"you"** (stored locally, see R11) so the UI can highlight your balance and default the payer to you.
 
 ## 3. Core scenarios
 
-### Scenario A: Adding a simple expense
-**Given** Alice, Bob, and Carol are on a trip
-**When** Alice records a $60 expense (description: "Dinner", date: today, payer: Alice, included: all three)
+### Scenario A: Adding a simple (even) expense
+
+**Given** a trip with Alice, Bob, and Carol
+**When** someone records a $60 expense (description: "Dinner", date: today, payer: Alice, split: even among all three)
 **Then** the app records: Bob -$20, Carol -$20, Alice +$40
 
-### Scenario B: Normal login
-**Given** User want to login 
-**When** User login or register normally
-**Then** the app redirects the user to the main dashboard that lists all their trips. If the user has no trips yet, the dashboard shows an empty state with a "Create new trip" button. If the user logged in after receiving an invitation, they are redirected to the trip-preview/accept screen for that invitation instead (see Scenario F).
+### Scenario B: Opening the app
 
-### Scenario C: Adding expense through screenshot
-**Given** Alice, Bob, and Carol are on a trip
-**When** Alice uploads a photo of a bill ($60 for dinner)
-**Then** the app analyzes the bill. If the photo is too blurry to read, the app asks Alice to re-upload. Otherwise, the app shows a review/edit screen pre-filled with the extracted amount, description, and date; Alice must confirm or correct each field, choose the payer (the app does NOT assume the uploader paid), and choose the included members. After confirmation, the app records the expense as in Scenario A.
+**Given** someone opens the home page
+**When** the page loads
+**Then** they see a hero with a **Create a trip** button, and below it the list of trips this browser has recently visited (remembered locally, see R11). If the browser has visited no trips, the recent-trips list is simply empty.
 
-### Scenario D: User creates a new trip
-**Given** User A wants to create a new trip to share expenses
-**When** User A opens the dashboard (which lists all their trips) and clicks **New trip**
-**Then** User A is prompted for: trip name (required), optional date range, and currency (required, from the supported list in R6). After saving, User A is redirected to the main page of the new trip.
+### Scenario C: Adding an expense from a receipt photo
 
-### Scenario E: Invite people to trip
-**Given** X create a new trip
-**When** X want to invite friends to the trip
-**Then** the app creates an invitation link right after the trip is created, **and** the trip's main page exposes a share button that copies that same link at any time.
+**Given** a trip with Alice, Bob, and Carol
+**When** someone uploads a photo of a bill ($60 for dinner)
+**Then** the app scans the bill with an on-device vision model. If the photo is too blurry or isn't a legible receipt, the app discards the upload and asks for a re-upload. Otherwise, the app shows a review/edit screen pre-filled with the extracted amount, description (merchant), and date; the user must confirm or correct each field, choose the payer (the app does **not** assume the uploader paid), and choose the split. After confirmation, the expense is recorded as in Scenario A, with the receipt photo attached.
 
-### Scenario F: Process after inviting people to trip
-**Given** User A receives an invitation link
-**When** User A clicks the link
-**Then**:
-- If User A is already logged in and not yet a member: they see a trip preview (name, member list, expense count) and an explicit **Accept invitation** button. On accept, they are added to the trip and redirected to its main page.
-- If User A is logged out but has a verified account: they are prompted to log in, then shown the preview/accept screen above.
-- If User A is new: they are prompted to register, then must verify their email (per R8). Once verified and logged in, they are shown the preview/accept screen.
-- If User A is already a member of the trip: they are redirected to the trip's main page (no preview, no double-add).
+### Scenario D: Creating a new trip
+
+**Given** someone wants a place to share expenses
+**When** they click **Create a trip** and fill the form
+**Then** they are prompted for: trip name (required), currency (required, from the supported list in R6), and an optional starting list of participant names. After saving, they are redirected to the new trip's page, which shows a shareable link.
+
+### Scenario E: Sharing a trip
+
+**Given** a trip exists
+**When** someone wants others to join
+**Then** the trip page exposes a **Share** button that copies the trip's link (`/trips/<publicId>`). There is no invitation/accept flow — the link *is* the access.
+
+### Scenario F: Opening a shared link
+
+**Given** someone receives a trip link
+**When** they open it
+**Then** the trip page loads directly (no login, no accept step). The browser records the visit into its recent-trips list (R11) and prompts "Which one are you?" so they can add themselves as a participant or pick an existing one as "you". If the trip's slug is unknown, the app shows a 404.
 
 ### Scenario G: Payer is excluded from the split
-**Given** Alice, Bob, and Carol are on a trip
-**When** Alice records a $20 expense (description: "Coffee for Bob & Carol", date: today, payer: Alice, included: Bob and Carol only — Alice excluded)
+
+**Given** a trip with Alice, Bob, and Carol
+**When** someone records a $20 expense (description: "Coffee for Bob & Carol", date: today, payer: Alice, split: even among Bob and Carol only — Alice excluded)
 **Then** the app records: Bob -$10, Carol -$10, Alice +$20
+
+### Scenario H: Custom (unequal) split
+
+**Given** a trip with Alice, Bob, and Carol
+**When** someone records a $100 expense (payer: Alice, split: custom — Alice $50, Bob $30, Carol $20)
+**Then** the shares must sum to the total (else the app rejects the entry), and the app records: Alice +$50, Bob -$30, Carol -$20. A person given a $0 custom share is simply not part of that expense.
 
 ## 4. Requirements
 
-_What MUST the app do? Number them — you'll cite these later (R1, R2, ...)._
+*What MUST the app do? Number them — you'll cite these later (R1, R2, ...).*
 
-- **R1.** Add a person to the trip:
-    - **Registered users** are invited via a reusable trip invitation link with no expiry. Clicking the link shows a trip preview (trip name, member list, expense count — *not* expense details) and an explicit Accept step before the user is added. Anyone with the link can accept until the trip is closed. Re-clicking the link once already a member redirects to the trip without re-adding.
-    - **Ghost members** are added by name only, by any existing member of the trip.
-- **R2.** Record an expense with payer, total amount, the set of people it's shared by (the *included* set), a short description, and a date (defaults to today, editable). Each expense has an include/exclude toggle per member; the total is split equally among the included. The payer is independent of the included set — the payer may be excluded (e.g. Alice pays for Bob and Carol but didn't share; see Scenario G). The included set must contain at least one member.
-- **R3.** Show a balance summary as net amount per person: `-$X` means "should pay", `+$X` means "should receive". No who-pays-whom suggestions.
-- **R4.** Capture an expense from a receipt photo. After OCR, the user is shown a review/edit screen pre-filled with the extracted amount, description, and date; the user must confirm or correct each field (and choose payer + included members) before saving (see Scenario C). The uploaded image is retained for the trip's lifetime and deleted when the trip is closed (see R9).
-- **R5.** Edit or delete an existing expense — permitted only for the original payer or the trip's creator.
-- **R6.** Create and manage trips. Each trip has a name (required), an optional date range, and a currency chosen at creation from a fixed supported list: **USD, EUR, CNY** (2 decimal places) and **VND, JPY, KRW** (0 decimal places). The currency is fixed for the trip's lifetime and applies to every expense within it.
-- **R7.** Persist accounts, trips, members, expenses, and receipt photos across sessions.
-- **R8.** Authenticate users via email + password. Email verification is required before a user can log in or accept a trip invitation.
-- **R9.** Trip creator can close (archive) a trip. **Closing is permanent and one-way** — closed trips cannot be re-opened. Closed trips are read-only and live in a separate archive section. Closing a trip deletes its receipt photos (see R4). If any member still has a non-zero balance, the app warns the creator before closing but does not block the action — the app never tracks real-world payment.
-- **R10.** Password reset via a one-time emailed link. Users can request a reset from the login page; they receive an email with a single-use link to set a new password.
+- **R1.** Add a person to a trip by name. Any visitor to the trip (anyone with the link) can add participants. Names must be unique within a trip (case-insensitive) — balances are read by name, so duplicates would be ambiguous. A starting set of participants may also be entered on the create-trip form (R6).
+- **R2.** Record an expense with a payer, a total amount, a short description, a date (defaults to today, editable), and a split. Two split modes:
+  - **Even** — the total is divided equally among an *included* set of participants (at least one). Any subset may be included; the payer is independent of the included set and may be excluded (see Scenario G).
+  - **Custom** — each participant is given an exact amount; the amounts must sum to the total. A participant with a $0 share is not part of the expense (see Scenario H).
+  The payer must be a participant of the trip. The amount must be greater than zero and is rounded to the trip currency's precision (R6).
+- **R3.** Show a balance summary as a net amount per person: `-$X` means "should pay", `+$X` means "should receive", `$0`/absent means "settled". No who-pays-whom suggestions. Balances are computed on demand from the raw expenses (never cached) and the net across all participants always sums to exactly zero.
+- **R4.** Capture an expense from a receipt photo. The image is normalized and read by an **on-device vision model** (via Ollama; no external API). After scanning, the user is shown a review/edit screen pre-filled with the extracted amount, description, and date; the user must confirm or correct each field (and choose payer + split) before saving (see Scenario C). Readable uploads are stored and attached to the expense; unreadable or unprocessable uploads are discarded and a re-upload is requested. Stored receipt photos are retained for the trip's lifetime and deleted when the trip is closed (see R8).
+- **R5.** Edit or delete an existing expense. Permitted for any visitor while the trip is open (there are no accounts to scope this to). Editing or deleting is blocked once the trip is closed (read-only).
+- **R6.** Create and manage trips. Each trip has a name (required) and a currency chosen at creation from a fixed supported list: **USD, EUR, CNY** (2 decimal places) and **VND, JPY, KRW** (0 decimal places). The currency is fixed for the trip's lifetime and applies to every expense within it. The create form may also seed an initial list of participants (R1).
+- **R7.** Persist trips, participants, expenses, receipt-photo references, and the shareable slug across sessions and devices, so any browser opening the link sees the same data.
+- **R8.** Any visitor can close (archive) a trip. **Closing is permanent and one-way** — closed trips cannot be re-opened. Closed trips are read-only. Closing a trip deletes its receipt photos (see R4). If any participant still has a non-zero balance, the app warns before closing but does not block the action — the app never tracks real-world payment.
+- **R9.** A trip is reached only by its non-guessable secret slug. There is no directory or search of trips; an unknown slug returns a 404 (does not leak existence). No authentication beyond possession of the link.
+- **R10.** Split-amount arithmetic must be exact (decimal, not floating point). For an even split, the shares sum to the expense total exactly (the highest-id participant absorbs any rounding remainder). For a custom split, the app rejects the entry unless the shares sum to the total.
+- **R11.** The browser remembers, locally (no server state), the trips it has visited (for the home page's recent list) and, per trip, which participant is "you". These are conveniences only; clearing them never affects trip data, and they are scoped to that one browser.
 
 ## 5. Explicitly out of scope
 
-_What you are NOT building. This is the most important section — it stops scope creep._
+*What you are NOT building. This is the most important section — it stops scope creep.*
 
-- [ ] Multi-currency support
+- [ ] User accounts, login/registration, passwords, email verification, or password reset (the app is deliberately account-free)
+- [ ] Email of any kind (invitations, verification, receipts, notifications)
+- [ ] An invitation/accept flow or per-recipient invite tokens (one shareable link per trip *is* the access)
+- [ ] "Registered vs ghost member" distinction (all participants are name-only)
+- [ ] Multi-currency within a single trip (one fixed currency per trip)
+- [ ] Currencies outside the supported list of {USD, EUR, CNY, VND, JPY, KRW}
+- [ ] Cross-device sync of the "recent trips" list or the "you" identity (these live only in the local browser)
 - [ ] Mobile app (web only for v1)
 - [ ] "Who pays whom" suggested settlement transactions (only net +/- per person is shown)
-- [ ] Claiming a ghost member into a registered account
-- [ ] Notifications (email, push)
-- [ ] Real-time live updates between members (a manual refresh is acceptable for v1)
-- [ ] Expense categories or tags
-- [ ] Comments on expenses
-- [ ] Audit log / change history
-- [ ] Removing or kicking members from a trip after they've been added (members stay for the life of the trip)
-- [ ] Single-use or expiring invitation links (one reusable link per trip)
-- [ ] Currencies outside the supported list of {USD, EUR, CNY, VND, JPY, KRW}
+- [ ] Notifications (email, push, in-app)
+- [ ] Real-time live updates between viewers (a manual refresh is acceptable for v1)
+- [ ] Expense categories or tags, comments on expenses, audit log / change history
+- [ ] Removing or renaming a participant after they've been added
 - [ ] Re-opening a closed trip (closure is one-way and permanent)
-- [ ] Editing a ghost member's name after creation, and removing/replacing ghosts
+- [ ] A trip date range (a trip has no start/end dates in v1)
 
 ## 6. Success criteria
 
-_How do you know v1 is done? List the specific things that must work._
+*How do you know v1 is done? List the specific things that must work.*
 
-- [ ] All scenarios in section 3 produce the expected output
-- [ ] All requirements (R1–R10) are implemented
-- [ ] A trip with 3+ members and 5+ expenses (mix of equal-share and include/exclude splits) produces a net-balance summary that sums to zero
-- [ ] Trip data survives a logout/login cycle
+- [ ] All scenarios in section 3 (A–H) produce the expected output
+- [ ] All requirements (R1–R11) are implemented
+- [ ] A trip with 3+ participants and 5+ expenses (mix of even and custom / include-exclude splits) produces a net-balance summary that sums to zero
+- [ ] Trip data survives a full page reload and is identical when the same link is opened from another browser
+- [ ] Closing a trip makes it read-only and removes its receipt photos from storage
 
 ## 7. Open questions
 
-_Things you don't know yet. Leave them here and resolve them before planning._
+*All open questions for v1 are resolved. The app pivoted from an account-based design (Auth.js, email verification, invitation/accept, registered-vs-ghost members, Claude-vision OCR) to the account-free, link-shared, on-device-OCR design captured above; the spec now reflects the as-built app.*
 
-_All open questions for v1 resolved across rounds 1–3. The spec is now locked for v1; further details belong in `02-plan.md`._
-
-_Reopen this section if a question surfaces during planning or implementation that the spec genuinely doesn't answer._
+*Reopen this section if a question surfaces during further work that the spec genuinely doesn't answer.*

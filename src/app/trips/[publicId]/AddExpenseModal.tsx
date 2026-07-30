@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Modal from "@/app/components/Modal";
 import ExpenseForm, { type MemberOption } from "./ExpenseForm";
 import AddFromPhoto from "./AddFromPhoto";
-import { getMe } from "@/lib/recent-trips";
+import { useMe } from "@/lib/recent-trips";
 import type { CurrencyCode } from "@/lib/currency";
 
 export const ADD_EXPENSE_DIALOG_ID = "add-expense-dialog";
@@ -25,10 +25,8 @@ export default function AddExpenseModal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<"manual" | "photo">("manual");
-  const [me, setMeState] = useState<number | null>(null);
-
-  // "You" is browser-local; read it once the dialog mounts to default the payer.
-  useEffect(() => setMeState(getMe(publicId)), [publicId]);
+  // "You" is browser-local (localStorage); defaults the payer to you.
+  const me = useMe(publicId);
 
   const close = () => ref.current?.close();
 

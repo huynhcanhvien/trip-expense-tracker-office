@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/app/components/Avatar";
-import { getRecentTrips, forgetTrip } from "@/lib/recent-trips";
+import { useRecentTripIds, forgetTrip } from "@/lib/recent-trips";
 import { fetchTripSummariesAction } from "@/app/trips/actions";
 
 interface Summary {
@@ -14,39 +14,32 @@ interface Summary {
   memberCount: number;
 }
 
-type Load = "loading" | "empty" | "ready";
-
 // The home page's "recent trips" list. The set of trips lives in this browser's
 // localStorage; we fetch fresh names/counts from the server for the ones that
-// still exist (a deleted/unknown trip simply drops off).
+// still exist (a deleted/unknown trip simply drops off). `trips === null` means
+// "not resolved yet" — we render nothing until we have some to show.
 export default function RecentTrips() {
-  const [status, setStatus] = useState<Load>("loading");
-  const [trips, setTrips] = useState<Summary[]>([]);
+  const recentIds = useRecentTripIds();
+  const [trips, setTrips] = useState<Summary[] | null>(null);
 
   useEffect(() => {
-    const recent = getRecentTrips();
-    if (recent.length === 0) {
-      setStatus("empty");
-      return;
-    }
+    if (recentIds.length === 0) return;
     let active = true;
-    fetchTripSummariesAction(recent.map((t) => t.publicId))
+    fetchTripSummariesAction(recentIds)
       .then((summaries) => {
-        if (!active) return;
-        setTrips(summaries);
-        setStatus(summaries.length > 0 ? "ready" : "empty");
+        if (active) setTrips(summaries);
       })
       .catch(() => {
-        if (active) setStatus("empty");
+        if (active) setTrips([]);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [recentIds]);
 
-  // Nothing to show yet (still loading) or no trips in this browser → render
-  // nothing, so the home page shows only the hero (the "first part").
-  if (status !== "ready") return null;
+  // Nothing in this browser, still loading, or all trips gone → render nothing,
+  // so the home page shows only the hero.
+  if (recentIds.length === 0 || !trips || trips.length === 0) return null;
 
   const active = trips.filter((t) => t.status === "open");
   const archived = trips.filter((t) => t.status === "closed");

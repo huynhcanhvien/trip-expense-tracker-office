@@ -1,6 +1,11 @@
 // Browser-side memory (localStorage) — the app has no accounts, so the browser
 // remembers which trips you've visited and who you are in each one. All
 // functions are SSR-safe (no-op / empty when `window` is undefined).
+//
+// This module doubles as a small external store: mutations notify subscribers so
+// the `useMe` / `useRecentTripIds` hooks (via useSyncExternalStore) re-render on
+// same-tab writes, and a `storage` listener picks up changes from other tabs.
+import { useSyncExternalStore } from "react";
 
 const RECENT_KEY = "trip-splitter:recent";
 const ME_PREFIX = "trip-splitter:me:";
@@ -17,6 +22,27 @@ export interface RecentTrip {
 function hasWindow(): boolean {
   return typeof window !== "undefined";
 }
+
+// --- external-store plumbing (for useSyncExternalStore) -------------------
+
+const listeners = new Set<() => void>();
+
+/** Notify hook subscribers after a same-tab write. */
+function emit(): void {
+  for (const l of listeners) l();
+}
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange);
+  // Also reflect writes made in other tabs.
+  if (hasWindow()) window.addEventListener("storage", onChange);
+  return () => {
+    listeners.delete(onChange);
+    if (hasWindow()) window.removeEventListener("storage", onChange);
+  };
+}
+
+// --- recent trips ---------------------------------------------------------
 
 /** Recent trips, most-recently-visited first. */
 export function getRecentTrips(): RecentTrip[] {
@@ -42,6 +68,7 @@ export function rememberTrip(trip: { publicId: string; name: string; currency: s
   const next = [{ ...trip, visitedAt: now }, ...others].slice(0, MAX_RECENT);
   try {
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    emit();
   } catch {
     // storage full / disabled — silently ignore
   }
@@ -54,10 +81,34 @@ export function forgetTrip(publicId: string): void {
   try {
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
     window.localStorage.removeItem(ME_PREFIX + publicId);
+    emit();
   } catch {
     // ignore
   }
 }
+
+// A stable snapshot of the recent-trip ids for useSyncExternalStore: recompute
+// only when the raw localStorage value changes, so the returned array keeps the
+// same reference between renders (else the store would loop).
+const EMPTY_IDS: string[] = [];
+let cachedRaw: string | null = null;
+let cachedIds: string[] = EMPTY_IDS;
+
+function recentIdsSnapshot(): string[] {
+  if (!hasWindow()) return EMPTY_IDS;
+  const raw = window.localStorage.getItem(RECENT_KEY);
+  if (raw === cachedRaw) return cachedIds;
+  cachedRaw = raw;
+  cachedIds = getRecentTrips().map((t) => t.publicId);
+  return cachedIds;
+}
+
+/** Public ids of this browser's recent trips, most-recent first (reactive). */
+export function useRecentTripIds(): string[] {
+  return useSyncExternalStore(subscribe, recentIdsSnapshot, () => EMPTY_IDS);
+}
+
+// --- "you" (which participant this browser is, per trip) ------------------
 
 /** The trip_members.id the user has claimed as "me" for this trip, or null. */
 export function getMe(publicId: string): number | null {
@@ -73,6 +124,7 @@ export function setMe(publicId: string, memberId: number): void {
   if (!hasWindow()) return;
   try {
     window.localStorage.setItem(ME_PREFIX + publicId, String(memberId));
+    emit();
   } catch {
     // ignore
   }
@@ -82,4 +134,14 @@ export function setMe(publicId: string, memberId: number): void {
 export function clearMe(publicId: string): void {
   if (!hasWindow()) return;
   window.localStorage.removeItem(ME_PREFIX + publicId);
+  emit();
+}
+
+/** Which participant this browser is in the given trip, or null (reactive). */
+export function useMe(publicId: string): number | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => getMe(publicId),
+    () => null,
+  );
 }

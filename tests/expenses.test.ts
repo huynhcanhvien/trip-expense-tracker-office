@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import type { Client } from "@libsql/client";
 import { makeTestDb, type TestDb } from "./helpers/testDb";
-import { createTrip, getTripByPublicId, addParticipant, listTripMembers } from "../src/lib/trips";
+import { createTrip, getTripByPublicId, listTripMembers } from "../src/lib/trips";
 import {
   createExpense,
   updateExpense,

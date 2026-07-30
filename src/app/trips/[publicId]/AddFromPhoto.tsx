@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ExpenseForm, { type MemberOption } from "./ExpenseForm";
-import { getMe } from "@/lib/recent-trips";
+import { useMe } from "@/lib/recent-trips";
 import type { CurrencyCode } from "@/lib/currency";
 
 interface Scan {
@@ -30,9 +30,7 @@ export default function AddFromPhoto({
   const [status, setStatus] = useState<Status>("idle");
   const [scan, setScan] = useState<Scan | null>(null);
   const [error, setError] = useState("");
-  const [me, setMeState] = useState<number | null>(null);
-
-  useEffect(() => setMeState(getMe(publicId)), [publicId]);
+  const me = useMe(publicId);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
