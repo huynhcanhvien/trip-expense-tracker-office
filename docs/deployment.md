@@ -10,7 +10,7 @@ và credentials khác nhau cho hai môi trường.
 - Tạo project Vercel staging riêng, đặt **Settings → Environments → Production
   Branch** là `dev`. Vercel sẽ deploy mỗi lần push `dev` lên domain staging cố định.
   Tên môi trường Vercel là Production trong project này, nhưng mọi credentials
-  phải thuộc Supabase/Groq staging. `APP_URL` và Supabase Auth Site URL dùng domain staging.
+  phải thuộc Supabase/Groq staging. App tự lấy domain Vercel; Supabase Auth Site URL dùng domain staging.
 - Project Vercel production riêng theo dõi nhánh `main`, dùng Supabase và secrets
   production. Việc deploy `dev` không làm thay đổi dữ liệu hoặc website production.
 - Có thể dùng domain Vercel cấp sẵn cho staging, không cần mua domain để thử app
@@ -91,8 +91,11 @@ thay thế việc kiểm tra credentials thật hoặc cấu hình Auth dashboar
 
 1. Import repository vào Vercel, chọn framework Next.js, Node.js 22+.
 2. Cấu hình biến app trong **Settings → Environment Variables** cho Production.
-   Preview dùng project Supabase staging và secrets staging riêng. Đặt `APP_URL`
-   là domain cố định của môi trường đó.
+   Preview dùng project Supabase staging và secrets staging riêng. `APP_URL` không bắt buộc trên Vercel: Production dùng
+   `VERCEL_PROJECT_PRODUCTION_URL`, Preview dùng `VERCEL_BRANCH_URL`
+   (fallback `VERCEL_URL`). Bật Automatically expose System Environment Variables
+   trong Settings → Environment Variables. Nếu cần ghi đè hoặc dùng hosting khác,
+   cấu hình `APP_URL` là domain HTTPS cố định.
 3. Build command `npm run build`, install command `npm ci`. Không thêm migration
    vào build command. NEXT_PUBLIC URL/key phải đúng trước build.
 4. OCR và xử lý ảnh dùng Node.js runtime, `maxDuration=60`. Chọn gói hosting hỗ
@@ -101,7 +104,8 @@ thay thế việc kiểm tra credentials thật hoặc cấu hình Auth dashboar
    `/api/cron/cleanup` mỗi ngày 20:00 UTC. Preview không tự chạy cron production.
 6. Deploy staging, nghiệm thu. Sau migration production và cấu hình đầy đủ,
    deploy cùng commit lên production. Có thể dùng domain Vercel trước rồi thêm
-   domain riêng; cập nhật APP_URL/Auth redirect và rebuild khi đổi domain.
+   domain riêng; cập nhật Supabase Auth Site URL/redirect và redeploy khi đổi domain.
+   Nếu đã đặt APP_URL để ghi đè, cập nhật biến đó theo domain mới.
 
 Nếu dùng CLI, link đúng project bằng `npx vercel link`, cấu hình env trên dashboard
 và dùng `npx vercel` để preview, `npx vercel --prod` cho production. Đừng import

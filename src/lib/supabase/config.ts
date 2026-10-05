@@ -26,11 +26,16 @@ export function safeNext(value: string | null | undefined, fallback = "/") {
 }
 
 export function appUrl() {
-  const value = process.env.APP_URL;
+  const value = process.env.APP_URL?.trim();
   if (value) return value.replace(/\/$/, "");
-  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL)
-    return `https://${process.env.VERCEL_URL}`;
+  const domain =
+    process.env.VERCEL_ENV === "preview"
+      ? process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL
+      : process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (domain) return `https://${domain}`;
   if (process.env.NODE_ENV === "production")
-    throw new Error("APP_URL chưa được cấu hình.");
+    throw new Error(
+      "Chưa có domain Vercel. Hãy cấu hình APP_URL nếu dùng hosting khác.",
+    );
   return "http://localhost:3000";
 }

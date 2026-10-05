@@ -1,7 +1,6 @@
 // Run: node --env-file=.env.production scripts/check-production-env.mjs
 // Pure validation: never prints secrets or contacts external services.
 const required = [
-  "APP_URL",
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_SECRET_KEY",
@@ -68,4 +67,8 @@ if (problems.length) {
   console.log(
     "Production application variables are present and structurally valid. Verify Auth/SMTP/provider settings and live credentials before release.",
   );
+  if (!process.env.APP_URL?.trim())
+    console.log(
+      "APP_URL is optional on Vercel: the app uses Vercel system domains. Other hosting requires APP_URL.",
+    );
 }
