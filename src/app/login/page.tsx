@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AuthForm from "./AuthForm";
 import { safeNext, supabaseConfigured } from "@/lib/supabase/config";
+import { PolicyLinks } from "../components/PublicPage";
 
 export default async function Login({
   searchParams,
@@ -42,6 +43,7 @@ export default async function Login({
           />
         )}
       </section>
+      <PolicyLinks />
     </main>
   );
 }

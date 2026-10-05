@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/auth/actions";
 import { requireUser } from "@/lib/supabase/server";
+import { PolicyLinks } from "./PublicPage";
 export default async function AppShell({ children }: { children: ReactNode }) {
   const { supabase } = await requireUser();
   const { count } = await supabase
@@ -29,6 +30,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
       <main className="office-page">{children}</main>
       <footer className="office-footer">
         Ứng tiền rõ ràng · Chia sẻ nhẹ nhàng
+        <PolicyLinks />
       </footer>
     </>
   );

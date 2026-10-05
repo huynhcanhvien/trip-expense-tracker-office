@@ -5,7 +5,16 @@ import { Empty, Heading } from "./components/OfficeUI";
 import { groupsForUser, officeContext, checked } from "@/lib/office-data";
 import { createGroup } from "@/lib/office-actions";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { serverSupabase } from "@/lib/supabase/server";
+import { supabaseConfigured } from "@/lib/supabase/config";
+import PublicHome from "./components/PublicHome";
 export default async function Home() {
+  if (!supabaseConfigured()) return <PublicHome />;
+  const client = await serverSupabase();
+  const {
+    data: { user: visitor },
+  } = await client.auth.getUser();
+  if (!visitor) return <PublicHome />;
   const { supabase, user } = await officeContext();
   const [groups, profile, count] = await Promise.all([
     groupsForUser(),
