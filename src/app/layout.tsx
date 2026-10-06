@@ -49,6 +49,7 @@ export default async function RootLayout({
       "savedImage",
       "upload",
       "editor",
+      "deleteGroup",
       "nav",
       "bank",
       "scanner",

@@ -8,10 +8,14 @@ khi tất cả khoản cần chuyển được xác nhận. Dùng cùng một UR
 
 - Google hoặc email/mật khẩu; xác minh email và khôi phục mật khẩu.
 - Nhóm riêng tư, link mời và duyệt thành viên.
+- Quản trị viên xóa nhóm sau khi nhập đúng tên xác nhận; xóa cả khoản chi/lịch sử và thu hồi link mời. Ảnh hóa đơn được đưa vào hàng đợi dọn Storage, không ảnh hưởng QR ngân hàng cá nhân.
+- Thành viên rời nhóm khi mọi khoản phải trả và phải thu đã được xác nhận. Khoản chi đã hủy không tính; lịch sử vẫn giữ cho thành viên còn lại. Quản trị viên không thể rời nhóm.
+  Khoản phải thu không bù trừ khoản phải trả: cần đối soát cả hai phía trước khi rời nhóm.
 - Hồ sơ ngân hàng, nội dung chuyển khoản và QR riêng của từng tài khoản.
 - Chia đều hoặc số tiền riêng, chọn tất cả/bỏ người; tiền tính chính xác theo tiền tệ nhóm.
 - Báo chuyển, xác nhận/từ chối, lịch sử thanh toán, hủy để đối soát.
 - Thông báo trong app và thống kê theo nhóm, thành viên, ngày.
+- Biểu đồ và bảng số liệu đổi ngay giữa theo tháng/theo ngày, dùng cùng bộ lọc ngày và tách tiền tệ.
 - Mobile chụp hóa đơn hoặc chọn ảnh; PC chọn file. Quét ảnh bằng Groq rồi kiểm tra trước khi lưu.
 
 ## Kiến trúc
@@ -103,6 +107,7 @@ file không đi qua giới hạn request 4,5 MB của Vercel.
 - Mỗi tài khoản tối đa 1 lượt quét đồng thời và 10 lượt/phút, lưu trên PostgreSQL.
 - Deadline OCR là 45 giây; lỗi ảnh/mạng/provider cho phép nhập tay hoặc thử lại thủ công, không tự gọi lại Groq.
 - Cron daily lúc 20:00 UTC dọn tối đa 100 ảnh chưa gắn expense/hồ sơ, đã cũ hơn 24 giờ. Với lưu lượng cao, tăng tần suất theo gói Vercel hoặc chạy thêm lượt cron có xác thực.
+- Khi xóa nhóm, ảnh được đánh dấu không còn truy cập được và chờ cron dọn sau khoảng đệm 24 giờ tính từ lúc upload được đăng ký; giữ record để thử lại nếu Storage lỗi. Khoảng đệm tránh lượt upload còn chạy tạo lại object sau khi dọn. Signed URL xem ảnh đã cấp trước đó có thể còn hiệu lực tối đa 5 phút.
 
 Tham khảo chính thức: [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads),
 [Groq Vision](https://console.groq.com/docs/vision).

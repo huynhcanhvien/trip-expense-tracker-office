@@ -35,7 +35,8 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "unread": "{count} unread",
-    "addExpense": "Expense"
+    "addExpense": "Expense",
+    "groupActions": "Group actions"
   },
   "shell": {
     "brand": "Office Split",
@@ -132,7 +133,12 @@
     "summary": "{members} members · {expenses} expenses",
     "members": "Members",
     "manage": "Manage",
-    "sections": "Group sections"
+    "sections": "Group sections",
+    "leaveGroup": "Leave group",
+    "leaveWarning": "You can leave only after the person who paid has confirmed all your payments, and you have confirmed receipt of all amounts others owe you. Cancelled expenses do not count; payables and receivables are not netted. Expense and payment history is kept; you will lose access and must request approval to join again.",
+    "confirmLeave": "Confirm leaving group",
+    "leaveConfirmation": "I want to leave this group",
+    "groupDetails": "Group members and management"
   },
   "newExpense": {
     "createExpense": "Create expense",
@@ -219,7 +225,14 @@
     "month": "Month",
     "amount": "Amount",
     "chartLabel": "Monthly spending chart ({currency})",
-    "monthlyData": "Monthly figures"
+    "monthlyData": "Monthly figures",
+    "dailySpending": "Daily spending",
+    "chartInterval": "Display by ({currency})",
+    "byMonth": "Month",
+    "byDay": "Day",
+    "dailyChartLabel": "Daily spending chart ({currency})",
+    "dailyData": "View daily data",
+    "day": "Day"
   },
   "notifications": {
     "notifications": "Notifications",
@@ -401,5 +414,13 @@
     "privacyTitle": "Privacy policy",
     "termsTitle": "Terms of use",
     "updated": "Updated: {date}"
+  },
+  "deleteGroup": {
+    "title": "Delete group",
+    "warning": "This cannot be undone. All group expenses, shares, payment history and notifications will be deleted. Invitation links will stop working. Receipt images will be cleaned up; personal accounts and bank QR codes will be kept.",
+    "confirmationLabel": "Enter the group name to confirm",
+    "confirm": "Permanently delete group",
+    "pending": "Deleting…",
+    "cancel": "Keep group"
   }
 }

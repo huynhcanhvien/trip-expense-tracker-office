@@ -36,6 +36,44 @@ const share = (
   payment_status: Share["payment_status"],
 ) => ({ expense_id, user_id, amount, payment_status });
 describe("office statistics", () => {
+  it("groups daily and monthly totals exactly, sorts dates and excludes cancelled expenses", () => {
+    const [s] = calculateStats(
+      [group("g", "USD")],
+      [
+        {
+          ...expense("first", "g", "active", "0.1"),
+          expense_date: "2026-10-06",
+        },
+        {
+          ...expense("second", "g", "completed", "0.2"),
+          expense_date: "2026-10-06",
+        },
+        {
+          ...expense("earlier", "g", "active", "2"),
+          expense_date: "2026-09-30",
+        },
+        {
+          ...expense("sameMonth", "g", "active", "0.05"),
+          expense_date: "2026-10-01",
+        },
+        {
+          ...expense("cancelled", "g", "cancelled", "999"),
+          expense_date: "2026-10-06",
+        },
+      ],
+      [],
+      "a",
+    );
+    expect(s.days).toEqual([
+      { day: "2026-09-30", amount: "2" },
+      { day: "2026-10-01", amount: "0.05" },
+      { day: "2026-10-06", amount: "0.3" },
+    ]);
+    expect(s.months).toEqual([
+      { month: "2026-09", amount: "2" },
+      { month: "2026-10", amount: "0.35" },
+    ]);
+  });
   it("keeps reported money outstanding and excludes own share from collection", () => {
     const [s] = calculateStats(
       [group("g", "VND")],

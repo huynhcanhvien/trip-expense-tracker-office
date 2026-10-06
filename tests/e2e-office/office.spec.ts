@@ -355,6 +355,226 @@ test.describe("real Supabase office workflow", () => {
       await outsideContext.close();
     }
   });
+  test("daily charts, paid-only departure and confirmed group deletion", async ({
+    page,
+    browser,
+  }, testInfo) => {
+    test.setTimeout(180_000);
+    const [owner, member] = people;
+    const memberContext = await browser.newContext({
+      viewport: testInfo.project.use.viewport,
+    });
+    const memberPage = await memberContext.newPage();
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false } },
+    );
+    const memberClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false } },
+    );
+    const checked = <T>({
+      data,
+      error,
+    }: {
+      data: T;
+      error: { message: string } | null;
+    }) => {
+      if (error) throw new Error(error.message);
+      return data;
+    };
+    try {
+      for (const [session, person] of [
+        [client, owner],
+        [memberClient, member],
+      ] as const) {
+        const { error } = await session.auth.signInWithPassword({
+          email: person.email,
+          password,
+        });
+        if (error) throw new Error(error.message);
+      }
+      const name = `Lifecycle ${randomUUID().slice(0, 8)}`;
+      const id = checked(
+        await client.rpc("create_group", { p_name: name, p_currency: "VND" }),
+      );
+      const group = checked(
+        await client
+          .from("office_groups")
+          .select("invite_token")
+          .eq("id", id)
+          .single(),
+      );
+      const request = checked(
+        await memberClient.rpc("request_join", {
+          p_token: group!.invite_token,
+        }),
+      );
+      checked(
+        await client.rpc("decide_join", {
+          p_request_id: request,
+          p_approve: true,
+        }),
+      );
+      const expenseIds: string[] = [];
+      for (const [date, amount] of [
+        ["2026-09-30", "30000"],
+        ["2026-10-01", "70000"],
+        ["2026-10-06", "50000"],
+      ]) {
+        expenseIds.push(
+          checked(
+            await client.rpc("save_expense", {
+              p_expense_id: null,
+              p_group_id: id,
+              p_description: `Lunch ${date}`,
+              p_amount: amount,
+              p_expense_date: date,
+              p_split_mode: "even",
+              p_shares: [{ userId: owner.id }, { userId: member.id }],
+              p_receipt_upload_id: null,
+            }),
+          ),
+        );
+      }
+      await login(page, owner.email);
+      await page.goto(`/statistics?group=${id}&from=2026-09-30&to=2026-10-06`);
+      const interval = page.getByRole("combobox", {
+        name: "Hiển thị theo (VND)",
+        exact: true,
+      });
+      await expect(interval).toHaveValue("month");
+      await page.getByText("Số liệu theo tháng", { exact: true }).click();
+      let table = page.getByRole("table", {
+        name: "Biểu đồ chi tiêu theo tháng (VND)",
+      });
+      await expect(table.getByRole("row")).toHaveCount(3);
+      await expect(table).toContainText("120.000 ₫");
+      await interval.selectOption("day");
+      await expect(page.getByTestId("monthly-chart")).toHaveAttribute(
+        "data-interval",
+        "day",
+      );
+      await expect(
+        page.getByRole("heading", { name: "Chi tiêu theo ngày", exact: true }),
+      ).toBeVisible();
+      table = page.getByRole("table", {
+        name: "Biểu đồ chi tiêu theo ngày (VND)",
+      });
+      await expect(table.getByRole("row")).toHaveCount(4);
+      for (const amount of ["30.000 ₫", "70.000 ₫", "50.000 ₫"])
+        await expect(table).toContainText(amount);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await interval.selectOption("month");
+      await expect(
+        page.getByRole("heading", { name: "Chi tiêu theo tháng", exact: true }),
+      ).toBeVisible();
+      await login(memberPage, member.email);
+      await memberPage.goto(`/groups/${id}`);
+      await expect(
+        memberPage.getByText("Xóa nhóm", { exact: true }),
+      ).toHaveCount(0);
+      await memberPage.getByText("Rời nhóm", { exact: true }).click();
+      await memberPage
+        .getByLabel("Tôi muốn rời nhóm này", { exact: true })
+        .check();
+      await memberPage
+        .getByRole("button", { name: "Xác nhận rời nhóm", exact: true })
+        .click();
+      await expect(
+        memberPage.getByRole("main").getByRole("alert"),
+      ).toContainText("Bạn cần thanh toán hết");
+      await expect(
+        memberPage.getByLabel("Tôi muốn rời nhóm này", { exact: true }),
+      ).not.toBeChecked();
+      for (const expenseId of expenseIds) {
+        checked(
+          await memberClient.rpc("payment_action", {
+            p_expense_id: expenseId,
+            p_action: "report",
+            p_user_id: member.id,
+          }),
+        );
+      }
+      await memberPage
+        .getByLabel("Tôi muốn rời nhóm này", { exact: true })
+        .check();
+      await memberPage
+        .getByRole("button", { name: "Xác nhận rời nhóm", exact: true })
+        .click();
+      await expect(
+        memberPage.getByRole("main").getByRole("alert"),
+      ).toContainText("được xác nhận");
+      await expect(
+        memberPage.getByLabel("Tôi muốn rời nhóm này", { exact: true }),
+      ).not.toBeChecked();
+      for (const expenseId of expenseIds) {
+        checked(
+          await client.rpc("payment_action", {
+            p_expense_id: expenseId,
+            p_action: "confirm",
+            p_user_id: member.id,
+          }),
+        );
+      }
+      await memberPage
+        .getByLabel("Tôi muốn rời nhóm này", { exact: true })
+        .check();
+      await memberPage
+        .getByRole("button", { name: "Xác nhận rời nhóm", exact: true })
+        .click();
+      await expect(memberPage).toHaveURL(base + "/");
+      await memberPage.goto(`/groups/${id}`);
+      await expect(
+        memberPage.getByRole("heading", {
+          name: "Không tìm thấy nội dung",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.goto(`/groups/${id}`);
+      await expect(page.getByText("Rời nhóm", { exact: true })).toHaveCount(0);
+      await page.getByText("Xóa nhóm", { exact: true }).click();
+      const remove = page.getByRole("button", {
+        name: "Xóa nhóm vĩnh viễn",
+        exact: true,
+      });
+      await expect(remove).toBeDisabled();
+      const confirmation = page.getByLabel("Nhập tên nhóm để xác nhận", {
+        exact: true,
+      });
+      await confirmation.fill("Wrong name");
+      await expect(remove).toBeDisabled();
+      await confirmation.fill(name);
+      await page.getByRole("button", { name: "Giữ nhóm", exact: true }).click();
+      await page.getByText("Xóa nhóm", { exact: true }).click();
+      await expect(confirmation).toHaveValue("");
+      await confirmation.fill(name);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await remove.click();
+      await expect(page).toHaveURL(base + "/");
+      await expect(page.getByRole("link", { name, exact: true })).toHaveCount(
+        0,
+      );
+      expect(
+        checked(await admin.from("office_groups").select("id").eq("id", id)),
+      ).toHaveLength(0);
+      expect(
+        checked(
+          await admin.from("office_expenses").select("id").eq("group_id", id),
+        ),
+      ).toHaveLength(0);
+    } finally {
+      await memberContext.close();
+    }
+  });
+
   test("English dashboard, group, expense, statistics and profile keep the same URLs", async ({
     page,
   }, testInfo) => {

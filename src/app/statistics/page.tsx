@@ -159,12 +159,11 @@ export default async function StatisticsPage({
           </div>
           <div className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-2">
             <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
-              <h3>{t("monthlySpending")}</h3>
-              {!s.months.length ? (
-                <Empty>{t("noSpendingInThisDateRange")}</Empty>
-              ) : (
-                <MonthlySpending months={s.months} currency={s.currency} />
-              )}
+              <MonthlySpending
+                months={s.months}
+                days={s.days}
+                currency={s.currency}
+              />
             </section>
             <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
               <h3>{t("yourPersonalTotals")}</h3>

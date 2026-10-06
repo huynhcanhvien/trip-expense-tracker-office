@@ -13,6 +13,16 @@ const english: Record<string, string> = {
   "Vui lòng đăng nhập để tiếp tục.": "Please sign in to continue.",
   "Chỉ quản trị viên nhóm được thực hiện thao tác này.":
     "Only the group administrator can perform this action.",
+  "Hãy nhập đúng tên nhóm để xác nhận xóa.":
+    "Enter the exact group name to confirm deletion.",
+  "Quản trị viên không thể rời nhóm. Bạn có thể xóa nhóm trong cài đặt.":
+    "The administrator cannot leave the group. You can delete it in settings.",
+  "Bạn cần thanh toán hết các khoản trong nhóm và được xác nhận đã nhận tiền trước khi rời nhóm.":
+    "All your group payments must be received and confirmed before you can leave.",
+  "Bạn cần nhận đủ và xác nhận các khoản người khác còn nợ bạn trong nhóm trước khi rời nhóm.":
+    "Receive and confirm all amounts others owe you in this group before leaving.",
+  "Hãy xác nhận bạn muốn rời nhóm.":
+    "Confirm that you want to leave the group.",
   "Bạn chưa được duyệt vào nhóm này.":
     "Your membership in this group has not been approved.",
   "Link mời không còn hiệu lực. Hãy xin link mới.":
