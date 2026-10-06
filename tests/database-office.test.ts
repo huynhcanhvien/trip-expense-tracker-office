@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 const owner = "10000000-0000-4000-8000-000000000001";
 const member = "20000000-0000-4000-8000-000000000002";
@@ -81,15 +81,12 @@ beforeAll(async () => {
     grant usage on schema public,storage to anon,authenticated,service_role;
     grant select,insert,update,delete on storage.objects to authenticated;
   `);
-  await db.exec(
-    await readFile(
-      new URL(
-        "../supabase/migrations/202610050001_office.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
+  const migrations = new URL("../supabase/migrations/", import.meta.url);
+  for (const filename of (await readdir(migrations))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
+    await db.exec(await readFile(new URL(filename, migrations), "utf8"));
+  }
   await db.query(
     "insert into auth.users(id,email) values ($1,'owner@example.test'),($2,'member@example.test'),($3,'outsider@example.test')",
     [owner, member, outsider],
@@ -100,6 +97,40 @@ afterAll(async () => {
 });
 
 describe("Supabase office migration: actual PostgreSQL functions and RLS", () => {
+  it("uses the new indexes for unread counts and stable paginated lists", async () => {
+    const indexedQueries = [
+      [
+        "notifications_user_unread",
+        "select id from notifications where user_id=$1 and read_at is null",
+      ],
+      [
+        "payment_events_expense_created_id",
+        "select * from payment_events where expense_id=$1 order by created_at desc,id",
+      ],
+      [
+        "office_expenses_group_date_id",
+        "select * from office_expenses where group_id=$1 order by expense_date desc,id",
+      ],
+      [
+        "group_members_group_joined_user",
+        "select * from group_members where group_id=$1 order by joined_at,user_id",
+      ],
+      [
+        "join_requests_group_pending_id",
+        "select * from join_requests where group_id=$1 and status='pending' order by id",
+      ],
+    ];
+    await db.transaction(async (tx) => {
+      // Tiny fixture tables normally favor sequential scans; disable only in this
+      // transaction to verify each real PostgreSQL index can satisfy its query.
+      await tx.exec("set local enable_seqscan=off");
+      for (const [index, sql] of indexedQueries) {
+        const result = await tx.query(`explain (format json) ${sql}`, [owner]);
+        expect(JSON.stringify(result.rows)).toContain(index);
+      }
+    });
+  });
+
   it("creates auth profiles and blocks anonymous RPCs and direct business writes", async () => {
     const profiles = await asUser<{ id: string }>(
       owner,

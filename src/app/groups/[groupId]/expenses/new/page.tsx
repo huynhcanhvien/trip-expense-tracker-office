@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { Heading } from "@/app/components/OfficeUI";
 import ExpenseEditor from "@/app/components/ExpenseEditor";
-import { groupData } from "@/lib/office-data";
+import { groupMembersData } from "@/lib/office-data";
 export default async function NewExpensePage({
   params,
 }: {
   params: Promise<{ groupId: string }>;
 }) {
   const { groupId } = await params;
-  const data = await groupData(groupId);
+  const data = await groupMembersData(groupId);
   if (!data) notFound();
   return (
     <AppShell>

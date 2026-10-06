@@ -1,9 +1,10 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import Big from "big.js";
 import type { Expense, Member, OfficeState, Share } from "@/lib/office-types";
 import { saveExpense } from "@/lib/office-actions";
-import { decimalPlaces, type CurrencyCode } from "@/lib/currency";
+import { decimalPlaces, formatAmount, type CurrencyCode } from "@/lib/currency";
+import { moneyInputError, moneyInputPattern } from "@/lib/money-input";
 import SubmitButton from "./SubmitButton";
 import ReceiptScanner from "./ReceiptScanner";
 import SavedImage from "./SavedImage";
@@ -46,6 +47,14 @@ export default function ExpenseEditor({
   const [scan, setScan] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const dp = decimalPlaces(currency as CurrencyCode);
+  const moneyId = useId();
+  const amountError = moneyInputError(amount, dp);
+  const customError =
+    mode === "custom"
+      ? selected
+          .map((id) => moneyInputError(custom[id] || "", dp, true))
+          .find(Boolean)
+      : undefined;
   let remaining = "";
   try {
     remaining = new Big(amount || 0)
@@ -84,7 +93,7 @@ export default function ExpenseEditor({
         action={action}
         className="office-form"
         onSubmit={(event) => {
-          if (mediaBusy) event.preventDefault();
+          if (mediaBusy || amountError || customError) event.preventDefault();
         }}
       >
         <input type="hidden" name="groupId" value={groupId} />
@@ -116,14 +125,38 @@ export default function ExpenseEditor({
             Tổng tiền ({currency})
             <input
               name="amount"
-              type="number"
+              type="text"
+              aria-label={`Tổng tiền (${currency})`}
               inputMode={dp ? "decimal" : "numeric"}
-              min={dp ? "0.01" : "1"}
-              step={dp ? "0.01" : "1"}
+              pattern={moneyInputPattern(dp)}
+              maxLength={32}
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={Boolean(amountError)}
+              aria-describedby={`${moneyId}-amount-preview${amountError ? ` ${moneyId}-amount-error` : ""}`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
             />
+            <output
+              id={`${moneyId}-amount-preview`}
+              className="muted"
+              aria-live="polite"
+              data-testid="expense-amount-preview"
+            >
+              {amount && !amountError
+                ? `Số tiền sẽ lưu: ${formatAmount(new Big(amount), currency as CurrencyCode)}`
+                : "Nhập tổng tiền, không dùng dấu phân cách hàng nghìn."}
+            </output>
+            {amountError && (
+              <span
+                id={`${moneyId}-amount-error`}
+                className="form-error"
+                role="alert"
+              >
+                {amountError}
+              </span>
+            )}
           </label>
           <label>
             Ngày chi
@@ -139,6 +172,7 @@ export default function ExpenseEditor({
         <label>
           Cách chia
           <select
+            aria-label="Cách chia"
             name="splitMode"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
@@ -183,11 +217,16 @@ export default function ExpenseEditor({
                 <label className="share-amount">
                   Số tiền
                   <input
-                    type="number"
+                    type="text"
                     aria-label={`Phần của ${m.profile?.name || "thành viên"}`}
                     inputMode={dp ? "decimal" : "numeric"}
-                    min="0"
-                    step={dp ? "0.01" : "1"}
+                    pattern={moneyInputPattern(dp)}
+                    maxLength={32}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-invalid={Boolean(
+                      moneyInputError(custom[m.user_id] || "", dp, true),
+                    )}
                     value={custom[m.user_id] || ""}
                     onChange={(e) =>
                       setCustom({ ...custom, [m.user_id]: e.target.value })
@@ -201,6 +240,11 @@ export default function ExpenseEditor({
           {mode === "custom" && (
             <p className={remaining === "0" ? "toast" : "form-error"}>
               Chênh lệch so với tổng: {remaining} {currency}
+            </p>
+          )}
+          {customError && (
+            <p className="form-error" role="alert">
+              {customError}
             </p>
           )}
         </fieldset>
@@ -225,7 +269,7 @@ export default function ExpenseEditor({
         <SubmitButton
           label={expense ? "Lưu thay đổi" : "Tạo expense"}
           pendingLabel="Đang lưu…"
-          disabled={mediaBusy}
+          disabled={Boolean(mediaBusy || amountError || customError)}
         />
       </form>
     </section>

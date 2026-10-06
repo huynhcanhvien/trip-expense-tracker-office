@@ -12,7 +12,7 @@ export async function proxy(request: NextRequest) {
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll: (values) => {
+      setAll: (values, headers) => {
         values.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         values.forEach(({ name, value, options }) =>
@@ -22,15 +22,20 @@ export async function proxy(request: NextRequest) {
             sameSite: "lax",
           }),
         );
+        Object.entries(headers).forEach(([name, value]) =>
+          response.headers.set(name, value),
+        );
       },
     },
   });
   await supabase.auth.getClaims();
+  // Session-dependent HTML/RSC must never enter a shared browser/CDN cache.
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
   return response;
 }
 
 export const config = {
   matcher: [
-    "/((?!api/cron|api/health|_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:png|jpg|jpeg|svg|webp)$).*)",
+    "/((?!privacy(?:/|$)|terms(?:/|$)|api/cron|api/health|_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:png|jpg|jpeg|svg|webp)$).*)",
   ],
 };

@@ -16,11 +16,15 @@ test("shows setup guidance when Supabase is not configured", async ({
 
 test("public homepage links to policies without requiring an account", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Chia tiền văn phòng", exact: true }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("homepage.png"),
+    fullPage: true,
+  });
   await page.getByRole("link", { name: "Quyền riêng tư", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Chính sách quyền riêng tư" }),

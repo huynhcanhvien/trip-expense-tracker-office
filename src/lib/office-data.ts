@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/supabase/server";
+import { cache } from "react";
 import type {
   Group,
   Profile,
@@ -50,7 +51,7 @@ export async function profilesFor(
     );
   return new Map(rows.map((p) => [p.id, p]));
 }
-export async function groupsForUser(): Promise<Group[]> {
+export const groupsForUser = cache(async (): Promise<Group[]> => {
   const { supabase } = await requireUser();
   return collectRows<Group>((start, end) =>
     supabase
@@ -60,7 +61,49 @@ export async function groupsForUser(): Promise<Group[]> {
       .order("id")
       .range(start, end),
   );
-}
+});
+
+export const unreadNotifications = cache(async () => {
+  const { supabase } = await requireUser();
+  const result = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
+  checked(result);
+  return result.count || 0;
+});
+
+/** Form data stays small even when a group's expense history has grown. */
+export const groupMembersData = cache(async (id: string) => {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  )
+    return null;
+  const { supabase, user } = await requireUser(`/groups/${id}`);
+  const group = checked(
+    await supabase.from("office_groups").select("*").eq("id", id).maybeSingle(),
+  ) as Group | null;
+  if (!group) return null;
+  const members = await collectRows<Member>((start, end) =>
+    supabase
+      .from("group_members")
+      .select("*")
+      .eq("group_id", id)
+      .order("joined_at")
+      .order("user_id")
+      .range(start, end),
+  );
+  const names = await profilesFor(members.map((member) => member.user_id));
+  return {
+    group,
+    user,
+    members: members.map((member) => ({
+      ...member,
+      profile: names.get(member.user_id),
+    })),
+  };
+});
+
 export async function groupData(id: string) {
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
@@ -127,23 +170,23 @@ export async function expenseData(id: string) {
   ) as Expense | null;
   if (!expense) return null;
   expense.amount = String(expense.amount);
-  const group = checked(
-    await supabase
+  const [groupResult, rawShares] = await Promise.all([
+    supabase
       .from("office_groups")
       .select("*")
       .eq("id", expense.group_id)
       .single(),
-  ) as Group;
-  const shares = (
-    await collectRows<Share>((a, b) =>
+    collectRows<Share>((a, b) =>
       supabase
         .from("office_shares")
         .select("*")
         .eq("expense_id", id)
         .order("user_id")
         .range(a, b),
-    )
-  ).map((s) => ({ ...s, amount: String(s.amount) }));
+    ),
+  ]);
+  const group = checked(groupResult) as Group;
+  const shares = rawShares.map((s) => ({ ...s, amount: String(s.amount) }));
   const names = await profilesFor([
     ...shares.map((s) => s.user_id),
     expense.creator_id,

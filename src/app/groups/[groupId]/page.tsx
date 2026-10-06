@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
 import CopyButton from "@/app/components/CopyButton";
+import OfficeIcon from "@/app/components/OfficeIcon";
 import { Heading, Empty, Badge, money } from "@/app/components/OfficeUI";
 import { groupData } from "@/lib/office-data";
 import { decideJoin, renameGroup, rotateInvite } from "@/lib/office-actions";
@@ -44,6 +45,9 @@ export default async function GroupPage({
                   key={e.id}
                   href={`/expenses/${e.id}`}
                 >
+                  <span className="group-expense-icon">
+                    <OfficeIcon name="receipt" size={19} />
+                  </span>
                   <div className="grow">
                     <strong>{e.description}</strong>
                     <p className="muted">
@@ -70,6 +74,14 @@ export default async function GroupPage({
             <div className="office-list">
               {members.map((m) => (
                 <div className="office-row" key={m.user_id}>
+                  <span className="member-avatar">
+                    {(m.profile?.name || "TV")
+                      .split(/\s+/)
+                      .map((part) => part.charAt(0))
+                      .slice(-2)
+                      .join("")
+                      .toUpperCase()}
+                  </span>
                   <strong className="grow">
                     {m.profile?.name || "Thành viên"}
                     {m.user_id === user.id ? " (bạn)" : ""}

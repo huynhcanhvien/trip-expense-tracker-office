@@ -308,6 +308,23 @@ test.describe("real Supabase office workflow", () => {
         () => document.documentElement.scrollWidth > window.innerWidth,
       );
       expect(overflow).toBe(false);
+      // A different account in the same browser must not inherit warmed private pages.
+      await page.goto(`${base}/`);
+      await expect(
+        page.getByRole("link").filter({ hasText: groupName }),
+      ).toBeVisible();
+      await page.goto(`${base}/groups/${groupId}`);
+      await page
+        .getByRole("button", { name: "Đăng xuất", exact: true })
+        .click();
+      await login(page, outsider.email);
+      await expect(
+        page.getByRole("link").filter({ hasText: groupName }),
+      ).toHaveCount(0);
+      await page.goto(`${base}/groups/${groupId}`);
+      await expect(
+        page.getByRole("heading", { name: "Không tìm thấy nội dung" }),
+      ).toBeVisible();
     } finally {
       await memberContext.close();
       await outsideContext.close();

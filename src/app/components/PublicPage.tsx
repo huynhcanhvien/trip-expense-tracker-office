@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-
+import OfficeIcon from "./OfficeIcon";
 export const supportEmail = "huynhcanhvien@gmail.com";
-
 export function PolicyLinks() {
   return (
     <nav className="public-links" aria-label="Thông tin ứng dụng">
@@ -13,20 +12,35 @@ export function PolicyLinks() {
     </nav>
   );
 }
-
 export default function PublicPage({ children }: { children: ReactNode }) {
   return (
-    <>
-      <header className="office-header">
+    <div className="public-shell">
+      <a className="skip-link" href="#main-content">
+        Đến nội dung chính
+      </a>
+      <header className="public-header">
         <Link className="brand" href="/">
-          Chia tiền <span>văn phòng</span>
+          <span className="brand-mark">
+            <OfficeIcon name="wallet" size={24} />
+          </span>
+          <span className="brand-text">
+            Chia tiền<span>VĂN PHÒNG</span>
+          </span>
         </Link>
-        <Link href="/login">Đăng nhập / Đăng ký</Link>
+        <Link href="/login" className="button-link public-login">
+          Đăng nhập / Đăng ký <OfficeIcon name="arrow" size={17} />
+        </Link>
       </header>
-      <main className="office-page public-content">{children}</main>
-      <footer className="office-footer">
+      <main className="public-content" id="main-content">
+        {children}
+      </main>
+      <footer className="public-footer">
+        <div>
+          <strong>Chia tiền văn phòng</strong>
+          <p>Cùng chi tiêu. Cùng rõ ràng.</p>
+        </div>
         <PolicyLinks />
       </footer>
-    </>
+    </div>
   );
 }

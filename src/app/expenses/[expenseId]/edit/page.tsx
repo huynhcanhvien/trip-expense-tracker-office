@@ -4,7 +4,7 @@ import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
 import { Heading } from "@/app/components/OfficeUI";
 import ExpenseEditor from "@/app/components/ExpenseEditor";
-import { expenseData, groupData } from "@/lib/office-data";
+import { expenseData, groupMembersData } from "@/lib/office-data";
 import { editMetadata } from "@/lib/office-actions";
 export default async function EditPage({
   params,
@@ -19,8 +19,10 @@ export default async function EditPage({
     data.expense.status === "cancelled"
   )
     notFound();
-  const group = await groupData(data.group.id);
-  if (!group) notFound();
+  const members = data.expense.has_reported
+    ? []
+    : (await groupMembersData(data.group.id))?.members;
+  if (!members) notFound();
   return (
     <AppShell>
       <Link className="back-link" href={`/expenses/${expenseId}`}>
@@ -63,7 +65,7 @@ export default async function EditPage({
           <ExpenseEditor
             groupId={data.group.id}
             currency={data.group.currency}
-            members={group.members}
+            members={members}
             expense={data.expense}
             shares={data.shares}
           />

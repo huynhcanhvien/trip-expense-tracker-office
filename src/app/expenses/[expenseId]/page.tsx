@@ -27,28 +27,29 @@ export default async function ExpensePage({
   if (!data) notFound();
   const { user, supabase, expense, group, shares, names } = data;
   const creator = expense.creator_id === user.id;
-  const bank = checked(
-    await supabase
+  const [bankResult, events] = await Promise.all([
+    supabase
       .from("bank_profiles")
       .select("*")
       .eq("user_id", expense.creator_id)
       .maybeSingle(),
-  ) as BankAccount | null;
-  const events = await collectRows<{
-    id: string;
-    user_id: string;
-    actor_id: string;
-    action: string;
-    created_at: string;
-  }>((a, b) =>
-    supabase
-      .from("payment_events")
-      .select("*")
-      .eq("expense_id", expenseId)
-      .order("created_at", { ascending: false })
-      .order("id")
-      .range(a, b),
-  );
+    collectRows<{
+      id: string;
+      user_id: string;
+      actor_id: string;
+      action: string;
+      created_at: string;
+    }>((a, b) =>
+      supabase
+        .from("payment_events")
+        .select("*")
+        .eq("expense_id", expenseId)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(a, b),
+    ),
+  ]);
+  const bank = checked(bankResult) as BankAccount | null;
   const required = shares.filter(
     (s) => s.payment_status !== "self" && new Big(s.amount).gt(0),
   );
