@@ -1,17 +1,24 @@
 import Link from "next/link";
-
-export default function NotFound() {
+import { getTranslations } from "next-intl/server";
+import PublicPage from "./components/PublicPage";
+import { buttonVariants } from "./components/ui/button";
+import { Card } from "./components/ui/card";
+export default async function NotFound() {
+  const [t, common] = await Promise.all([
+    getTranslations("errors"),
+    getTranslations("common"),
+  ]);
   return (
-    <main className="page">
-      <section className="card">
-        <h1>Không tìm thấy nội dung</h1>
-        <p className="muted">
-          Liên kết không tồn tại hoặc bạn chưa có quyền truy cập.
+    <PublicPage>
+      <Card className="mx-auto my-12 max-w-xl">
+        <h1>{t("notFound")}</h1>
+        <p className="mb-6 mt-3 text-muted-foreground">
+          {t("notFoundDescription")}
         </p>
-        <Link href="/" className="back-link">
-          Về danh sách nhóm
+        <Link href="/" className={buttonVariants({ variant: "outline" })}>
+          {common("back")}
         </Link>
-      </section>
-    </main>
+      </Card>
+    </PublicPage>
   );
 }

@@ -1,32 +1,10 @@
 import type { ReactNode } from "react";
 import Big from "big.js";
 import { formatAmount, type CurrencyCode } from "@/lib/currency";
-import OfficeIcon from "./OfficeIcon";
+import { EmptyState } from "./ui/empty-state";
 export const money = (value: string, currency: string) =>
   formatAmount(new Big(value), currency as CurrencyCode);
-export const statusText = (status: string) =>
-  ({
-    active: "Đang thu",
-    collecting: "Đang thu",
-    completed: "Hoàn tất",
-    cancelled: "Đã hủy",
-    unpaid: "Chưa trả",
-    reported: "Chờ xác nhận",
-    confirmed: "Đã xác nhận",
-    self: "Không cần chuyển",
-    exempt: "Không cần chuyển",
-    pending: "Chưa trả",
-    approved: "Đã tham gia",
-    rejected: "Đã từ chối",
-  })[status] || status;
-export function Badge({ status }: { status: string }) {
-  return (
-    <span className={`badge badge-${status}`}>
-      <span className="badge-dot" />
-      {statusText(status)}
-    </span>
-  );
-}
+export { StatusBadge as Badge } from "./ui/badge";
 export function Heading({
   eyebrow,
   title,
@@ -39,23 +17,24 @@ export function Heading({
   children?: ReactNode;
 }) {
   return (
-    <div className="office-heading">
-      <div className="heading-copy">
-        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1>{title}</h1>
-        {description && <p className="muted">{description}</p>}
+    <div className="mb-7 flex min-w-0 flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-primary">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="wrap-anywhere">{title}</h1>
+        {description && (
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            {description}
+          </p>
+        )}
       </div>
-      {children && <div className="heading-actions">{children}</div>}
+      {children && <div className="max-w-full">{children}</div>}
     </div>
   );
 }
 export function Empty({ children }: { children: ReactNode }) {
-  return (
-    <div className="empty">
-      <span className="empty-icon">
-        <OfficeIcon name="receipt" size={28} />
-      </span>
-      <p>{children}</p>
-    </div>
-  );
+  return <EmptyState>{children}</EmptyState>;
 }

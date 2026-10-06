@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID, randomBytes } from "node:crypto";
@@ -116,6 +117,24 @@ test.describe("real Supabase office workflow", () => {
     const outsidePage = await outsideContext.newPage();
     try {
       await login(page, owner.email);
+      await expect(
+        page.getByRole("button", { name: "Đăng xuất", exact: true }),
+      ).toBeInViewport();
+      if (testInfo.project.name === "mobile") {
+        await expect(page.getByTestId("mobile-tab-bar")).toBeVisible();
+        await expect(page.getByTestId("desktop-navigation")).toBeHidden();
+        for (const label of ["Nhóm", "Thống kê", "Thông báo", "Hồ sơ"]) {
+          await expect(
+            page
+              .getByTestId("mobile-tab-bar")
+              .getByRole("link", { name: label, exact: true }),
+          ).toBeVisible();
+        }
+      } else {
+        await expect(page.getByTestId("desktop-navigation")).toBeVisible();
+        await expect(page.getByTestId("mobile-tab-bar")).toBeHidden();
+      }
+
       const groupName = `Nhóm kiểm thử ${randomUUID().slice(0, 8)}`;
       await page.getByLabel("Tên nhóm", { exact: true }).fill(groupName);
       await page.getByRole("button", { name: "Tạo nhóm", exact: true }).click();
@@ -278,9 +297,11 @@ test.describe("real Supabase office workflow", () => {
       await expect(
         page.getByText("101.000 ₫", { exact: true }).first(),
       ).toBeVisible();
+      await expect(page.getByTestId("monthly-chart")).toBeVisible();
       await page.screenshot({
         path: testInfo.outputPath("statistics.png"),
         fullPage: true,
+        caret: "initial",
       });
 
       await page.goto(`${base}/expenses/${expenseId}`);
@@ -300,9 +321,13 @@ test.describe("real Supabase office workflow", () => {
       await page
         .getByRole("button", { name: "Đánh dấu tất cả đã đọc" })
         .click();
+      await expect(
+        page.getByText("Đã đánh dấu đã đọc.", { exact: true }),
+      ).toBeVisible();
       await page.screenshot({
         path: testInfo.outputPath("notifications.png"),
         fullPage: true,
+        caret: "initial",
       });
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth,
@@ -329,5 +354,135 @@ test.describe("real Supabase office workflow", () => {
       await memberContext.close();
       await outsideContext.close();
     }
+  });
+  test("English dashboard, group, expense, statistics and profile keep the same URLs", async ({
+    page,
+  }, testInfo) => {
+    await login(page, people[0].email);
+    await page
+      .getByRole("combobox", { name: "Ngôn ngữ", exact: true })
+      .selectOption("en");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(
+      page.getByRole("heading", { name: "Your balance ledger", exact: true }),
+    ).toBeVisible();
+    async function checkAccessibility() {
+      for (const colorScheme of ["light", "dark"] as const) {
+        await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+        if (colorScheme === "dark")
+          await expect(page.locator("html")).toHaveClass(/dark/);
+        else await expect(page.locator("html")).not.toHaveClass(/dark/);
+        const audit = await new AxeBuilder({ page })
+          .exclude("nextjs-portal")
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+          .analyze();
+        expect(audit.violations, page.url()).toEqual([]);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+      }
+      await page.emulateMedia({ colorScheme: "light" });
+    }
+    await checkAccessibility();
+    if (testInfo.project.name === "mobile") {
+      const viewport = page.viewportSize()!;
+      await page.setViewportSize({ width: 320, height: viewport.height });
+      await checkAccessibility();
+      const brand = await page
+        .getByRole("link", { name: "Office Split", exact: true })
+        .boundingBox();
+      expect(brand?.width).toBeGreaterThanOrEqual(44);
+      expect(brand?.height).toBeGreaterThanOrEqual(44);
+      await expect(
+        page.getByRole("combobox", { name: "Language", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Sign out", exact: true }),
+      ).toBeInViewport();
+      await expect(
+        page
+          .getByTestId("mobile-tab-bar")
+          .getByRole("link", { name: "Profile", exact: true }),
+      ).toBeVisible();
+      const terms = await page
+        .getByRole("link", { name: "Terms", exact: true })
+        .boundingBox();
+      expect(terms?.width).toBeGreaterThanOrEqual(44);
+      expect(terms?.height).toBeGreaterThanOrEqual(44);
+      await page.setViewportSize(viewport);
+    }
+    const name = `English group ${randomUUID().slice(0, 8)}`;
+    await page.getByLabel("Group name", { exact: true }).fill(name);
+    await page
+      .getByRole("button", { name: "Create group", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
+    await checkAccessibility();
+    const groupUrl = page.url();
+    await expect(
+      page.getByRole("heading", { name: "Join requests (0)", exact: true }),
+    ).toBeVisible();
+    if (testInfo.project.name === "mobile") {
+      await page.getByRole("link", { name: "Manage", exact: true }).click();
+      await expect(page).toHaveURL(/#manage$/);
+      await expect(
+        page.getByRole("heading", { name: "Invite colleagues", exact: true }),
+      ).toBeInViewport();
+    }
+    await page.goto(groupUrl + "/expenses/new");
+    await checkAccessibility();
+    await page.getByLabel("Description", { exact: true }).fill("English lunch");
+    await page.getByLabel("Total amount (VND)", { exact: true }).fill("120000");
+    await page.getByLabel("Expense date", { exact: true }).fill("2026-10-05");
+    await expect(page.getByTestId("expense-amount-preview")).toHaveText(
+      "Amount to save: 120.000 ₫",
+    );
+    await page
+      .getByRole("button", { name: "Create expense", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/expenses\/[0-9a-f-]+$/);
+    await expect(
+      page.getByRole("heading", { name: "English lunch", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Shares and repayments", exact: true }),
+    ).toBeVisible();
+    await checkAccessibility();
+    const groupId = new URL(groupUrl).pathname.split("/").pop();
+    await page.goto(
+      `/statistics?group=${groupId}&from=2026-10-01&to=2026-10-31`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Statistics", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByTestId("monthly-chart")).toBeVisible();
+    await checkAccessibility();
+    await page.goto("/notifications");
+    await expect(
+      page.getByRole("heading", { name: "Notifications", exact: true }),
+    ).toBeVisible();
+    await checkAccessibility();
+    await page.goto("/profile");
+    await expect(
+      page.getByRole("heading", { name: "Appearance & language", exact: true }),
+    ).toBeVisible();
+    await checkAccessibility();
+    await page.getByLabel("Bank", { exact: true }).fill("Test Bank");
+    await page.getByLabel("Account number", { exact: true }).fill("0123456789");
+    await page
+      .getByLabel("Account holder name", { exact: true })
+      .fill("TEST ACCOUNT");
+    await page
+      .getByRole("button", { name: "Save bank account", exact: true })
+      .click();
+    await expect(
+      page.getByText("Bank account saved.", { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 });

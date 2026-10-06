@@ -1,41 +1,74 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import Providers from "./components/Providers";
 import "./globals.css";
-
-// Geist / Geist Mono: a clean neo-grotesque pairing that echoes the OpenAI
-// "Supply Co." aesthetic — a crisp humanist sans for display + body, and a
-// monospace used for the small uppercase eyebrow / section labels. Both are
-// variable fonts, so the full weight range is available.
-const geist = Geist({
-  variable: "--font-sans",
+const display = localFont({
+  variable: "--font-display",
+  src: [
+    {
+      path: "./fonts/be-vietnam-pro-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/be-vietnam-pro-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  display: "optional",
+  adjustFontFallback: "Arial",
+});
+const code = Geist_Mono({
+  variable: "--font-code",
+  preload: false,
   subsets: ["latin"],
   display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-export const metadata: Metadata = {
-  title: "Chia tiền văn phòng",
-  description:
-    "Ghi chi phí nhóm, chia tiền và xác nhận chuyển khoản trên PC và điện thoại.",
-};
-
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata");
+  return { title: t("title"), description: t("description") };
+}
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  // Server-only page copy stays on the server. Ship the namespaces used by client controls.
+  const clientMessages = Object.fromEntries(
+    [
+      "auth",
+      "password",
+      "errors",
+      "common",
+      "statistics",
+      "savedImage",
+      "upload",
+      "editor",
+      "nav",
+      "bank",
+      "scanner",
+      "locale",
+      "theme",
+      "status",
+    ].map((key) => [key, messages[key]]),
+  );
   return (
     <html
-      lang="vi"
+      lang={locale}
+      suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={`${display.variable} ${code.variable}`}
     >
-      <body>{children}</body>
+      <body className="app-backdrop">
+        <NextIntlClientProvider messages={clientMessages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

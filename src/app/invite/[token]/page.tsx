@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
@@ -9,6 +10,7 @@ export default async function InvitePage({
 }: {
   params: Promise<{ token: string }>;
 }) {
+  const t = await getTranslations("invite");
   const { token } = await params;
   const { supabase } = await officeContext(`/invite/${token}`);
   const result = await supabase.rpc("invite_info", { p_token: token });
@@ -19,35 +21,43 @@ export default async function InvitePage({
   } | null;
   return (
     <AppShell>
-      <section className="card narrow">
+      <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6 mx-auto w-full max-w-3xl">
         {!info ? (
           <>
             <Heading
-              title="Link mời không còn hiệu lực"
-              description="Hãy nhờ quản trị viên gửi link mời mới."
+              title={t("invitationExpired")}
+              description={t("askTheAdministratorForANew")}
             />
-            <Link href="/">Về danh sách nhóm</Link>
+            <Link href="/">{t("backToGroups")}</Link>
           </>
         ) : (
           <>
-            <Heading eyebrow="Lời mời tham gia" title={info.name} />
+            <Heading eyebrow={t("groupInvitation")} title={info.name} />
             {info.status === "approved" ? (
-              <Link className="button-link" href={`/groups/${info.group_id}`}>
-                Mở nhóm
+              <Link
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                href={`/groups/${info.group_id}`}
+              >
+                {t("openGroup")}
               </Link>
             ) : info.status === "pending" ? (
               <>
-                <span className="badge">Chờ duyệt</span>
-                <p className="muted">
-                  Bạn sẽ xem được dữ liệu nhóm sau khi quản trị viên duyệt.
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                  {t("awaitingApproval")}
+                </span>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  {t("youCanViewTheGroupS")}
                 </p>
               </>
             ) : (
               <>
-                <p className="muted">
-                  Gửi yêu cầu tham gia nhóm để quản trị viên duyệt.
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  {t("sendAJoinRequestForThe")}
                 </p>
-                <ActionForm action={requestJoin} label="Xin tham gia nhóm">
+                <ActionForm
+                  action={requestJoin}
+                  label={t("requestToJoinGroup")}
+                >
                   <input type="hidden" name="token" value={token} />
                 </ActionForm>
               </>

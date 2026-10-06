@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localizeServerMessage } from "@/i18n/server-messages";
 import { useEffect, useRef, useState } from "react";
 import ImageUpload, { type UploadedImage } from "./ImageUpload";
 
@@ -20,6 +23,8 @@ export default function ReceiptScanner({
   onScanned,
   onBusyChange,
 }: Props) {
+  const t = useTranslations("scanner");
+  const locale = useLocale();
   const [upload, setUpload] = useState<UploadedImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -86,29 +91,32 @@ export default function ReceiptScanner({
   }
 
   return (
-    <section className="receipt-scanner" aria-label="Quét hóa đơn">
+    <section
+      className="my-5 space-y-4 rounded-2xl border border-dashed bg-muted/30 p-4"
+      aria-label={t("scanReceipt")}
+    >
       <ImageUpload
         groupId={groupId}
         kind="receipt"
         onUploaded={uploaded}
         onBusyChange={setUploadBusy}
       />
-      <p className="muted">
-        Khi bấm quét, ảnh hóa đơn sẽ được gửi đến Groq để đọc nội dung.
+      <p className="mt-2 text-sm leading-7 text-muted-foreground">
+        {t("whenYouScanTheReceiptImage")}
       </p>
       {upload && (
         <button
           type="button"
-          className="button secondary"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-input bg-surface-raised text-foreground hover:bg-muted"
           disabled={busy || uploadBusy}
           onClick={() => void scan()}
         >
-          {busy ? "Đang quét…" : "Quét hóa đơn"}
+          {busy ? t("scanning") : t("scanReceipt")}
         </button>
       )}
       {message && (
         <p role="status" aria-live="polite">
-          {message}
+          {localizeServerMessage(message, locale)}
         </p>
       )}
     </section>

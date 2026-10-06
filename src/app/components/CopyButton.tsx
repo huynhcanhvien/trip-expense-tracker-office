@@ -1,33 +1,38 @@
 "use client";
 import { useState } from "react";
+import { Copy, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "./ui/button";
 export default function CopyButton({
   value,
-  label = "Sao chép",
+  label,
 }: {
   value: string;
   label?: string;
 }) {
-  const [message, setMessage] = useState("");
+  const t = useTranslations("common");
+  const [result, setResult] = useState<"copied" | "copyError" | null>(null);
   return (
-    <span className="copy-control">
-      <button
-        type="button"
-        className="secondary btn-sm"
+    <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(
               value.startsWith("/") ? `${location.origin}${value}` : value,
             );
-            setMessage("Đã sao chép");
+            setResult("copied");
           } catch {
-            setMessage("Không thể sao chép, vui lòng chọn nội dung.");
+            setResult("copyError");
           }
         }}
       >
-        {label}
-      </button>
-      <span role="status" className="muted">
-        {message}
+        {result === "copied" ? <Check /> : <Copy />}
+        {label || t("copy")}
+      </Button>
+      <span role="status" className="text-xs text-muted-foreground">
+        {result && t(result)}
       </span>
     </span>
   );

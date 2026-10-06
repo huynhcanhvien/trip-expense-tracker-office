@@ -1,0 +1,72 @@
+{
+  "devtools": {
+    "measuredAt": "2026-10-06T03:56:21.538Z",
+    "profile": "Lighthouse mobile devtools throttling; browser cache cleared before every page; local production build; isolated Supabase fixtures; gzip of unique JS chunks loaded by each page",
+    "targets": {
+      "lcpMs": 2500,
+      "cls": 0.1,
+      "jsGzipBytes": 300000
+    },
+    "pages": [
+      {
+        "page": "public",
+        "lcpMs": 1722,
+        "cls": 0,
+        "jsGzipBytes": 182043,
+        "performance": 99,
+        "accessibility": 100
+      },
+      {
+        "page": "dashboard",
+        "lcpMs": 1663,
+        "cls": 0,
+        "jsGzipBytes": 182043,
+        "performance": 89,
+        "accessibility": 100
+      },
+      {
+        "page": "statistics",
+        "lcpMs": 1589,
+        "cls": 0,
+        "jsGzipBytes": 284254,
+        "performance": 96,
+        "accessibility": 100
+      }
+    ]
+  },
+  "simulate": {
+    "measuredAt": "2026-10-06T03:19:20.537Z",
+    "profile": "Lighthouse mobile simulated throttling; browser cache cleared before every page; local production build; isolated Supabase fixtures; gzip of unique JS chunks loaded by each page",
+    "targets": {
+      "lcpMs": 2500,
+      "cls": 0.1,
+      "jsGzipBytes": 300000
+    },
+    "pages": [
+      {
+        "page": "public",
+        "lcpMs": 2834,
+        "cls": 0,
+        "jsGzipBytes": 182043,
+        "performance": 96,
+        "accessibility": 100
+      },
+      {
+        "page": "dashboard",
+        "lcpMs": 2671,
+        "cls": 0,
+        "jsGzipBytes": 182043,
+        "performance": 97,
+        "accessibility": 100
+      },
+      {
+        "page": "statistics",
+        "lcpMs": 2972,
+        "cls": 0,
+        "jsGzipBytes": 284254,
+        "performance": 95,
+        "accessibility": 100
+      }
+    ]
+  }
+}

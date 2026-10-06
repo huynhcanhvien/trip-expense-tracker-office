@@ -2,6 +2,9 @@
 
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
+import { LoaderCircle } from "lucide-react";
+import { cn } from "./ui/cn";
+import { buttonVariants } from "./ui/button";
 
 // A form submit button that disables itself and swaps its label while the
 // surrounding form's action is pending. Reads the pending state from the
@@ -21,7 +24,13 @@ export default function SubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={className} disabled={pending || disabled}>
+    <button
+      type="submit"
+      className={cn(buttonVariants(), className)}
+      aria-busy={pending}
+      disabled={pending || disabled}
+    >
+      {pending && <LoaderCircle className="animate-spin" aria-hidden="true" />}
       {pending ? pendingLabel : label}
     </button>
   );

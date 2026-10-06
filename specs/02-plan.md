@@ -1,6 +1,25 @@
 # 02 — Plan
 
-## 1. Tech stack — as built
+## 1. Tech stack — current office app (2026-10-06)
+
+The active routes use Next.js 16 / React 19, Supabase Auth + PostgreSQL/RLS +
+private Storage, Groq receipt OCR and Vercel hosting. Money arithmetic uses
+`big.js`; database transactions validate amounts and shares.
+
+The UI redesign uses **Tailwind CSS v4**, **Radix UI**, **Lucide**,
+**next-themes** (persisted light/dark/system) and **next-intl** (Vietnamese by
+default; locale cookie without URL changes). Components live in
+`src/app/components/ui`; tokens in `src/app/globals.css`. Be Vietnam Pro is the
+primary font. Recharts is loaded only for statistics, with an equivalent numeric
+table and mobile member cards. Playwright + axe-core validate accessibility;
+`npm run ui:audit` measures production Lighthouse targets on local Supabase. See [UI redesign progress](04-ui-redesign.md) for migration status.
+
+### Historical trip prototype decisions
+
+The table and implementation plan below describe the retired public-trip
+prototype. They are retained as project history; they do not describe the
+current office app's database, auth, storage, OCR or deployment.
+
 
 | Concern | Decision | Why (alternatives ruled out) |
 | --- | --- | --- |
