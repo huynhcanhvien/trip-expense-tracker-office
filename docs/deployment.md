@@ -116,9 +116,18 @@ Tài liệu: [Vercel cron](https://vercel.com/docs/cron-jobs/manage-cron-jobs),
 
 ## 5. Nghiệm thu trên URL deploy
 
+Phát hành chức năng xóa/rời nhóm cần áp dụng migration
+`202610060001_delete_group.sql` và `202610060002_leave_group.sql` vào đúng project
+Supabase trước khi deploy code. Migration chỉ bổ sung RPC/quyền và cơ chế dọn ảnh;
+không tự xóa nhóm nào. Local kiểm thử dùng `npx supabase migration up --local`;
+project đã link đúng môi trường dùng `npm run migrate`.
+
 - `/api/health` trả 200. Không đăng nhập không xem được dữ liệu/ảnh qua URL trực tiếp.
 - Đăng ký, nhận email xác minh, Google login, đăng xuất và khôi phục mật khẩu đều dùng đúng domain.
 - Hai tài khoản tạo/tham gia nhóm, được duyệt, tạo expense, báo chuyển và xác nhận; trạng thái hoàn tất đúng.
+- Thành viên không thể rời khi còn phần phải trả/phải thu hoặc mới báo chuyển chưa được xác nhận. Sau xác nhận, rời được và lịch sử còn nguyên cho người ở lại; tên người đã rời vẫn hiển thị trong lịch sử.
+- Chỉ quản trị viên xóa được nhóm sau xác nhận đúng tên. Link mời cũ vô hiệu; expense/thông báo/lịch sử nhóm mất, QR cá nhân và nhóm khác còn nguyên. Ảnh hóa đơn chờ cron dọn có thể thử lại nếu Storage lỗi.
+- Thống kê đổi ngày/tháng ngay trên trang, bảng số liệu khớp biểu đồ, giữ bộ lọc và tách các tiền tệ.
 - QR ngân hàng và hóa đơn chỉ xem được bởi người có quyền. Tài khoản ngoài nhóm/chờ duyệt bị từ chối.
 - PC chọn file; Safari iPhone/Chrome Android chụp ảnh, HEIC, đổi ảnh, mạng yếu, quét và nhập tay khi Groq lỗi.
 - Expense/ảnh còn nguyên sau redeploy và khi máy phát triển tắt. Thống kê chỉ tính tiền đã xác nhận.

@@ -146,6 +146,7 @@ export async function groupData(id: string) {
   const names = await profilesFor([
     ...members.map((x) => x.user_id),
     ...requests.map((x) => x.user_id),
+    ...expenses.map((x) => x.creator_id),
   ]);
   return {
     group,
@@ -153,6 +154,7 @@ export async function groupData(id: string) {
     members: members.map((x) => ({ ...x, profile: names.get(x.user_id) })),
     requests: requests.map((x) => ({ ...x, profile: names.get(x.user_id) })),
     expenses: expenses.map((x) => ({ ...x, amount: String(x.amount) })),
+    names,
   };
 }
 export async function expenseData(id: string) {

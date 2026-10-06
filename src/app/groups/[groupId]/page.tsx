@@ -5,10 +5,16 @@ import { notFound } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
 import CopyButton from "@/app/components/CopyButton";
+import DeleteGroupForm from "@/app/components/DeleteGroupForm";
 
 import { Heading, Empty, Badge, money } from "@/app/components/OfficeUI";
 import { groupData } from "@/lib/office-data";
-import { decideJoin, renameGroup, rotateInvite } from "@/lib/office-actions";
+import {
+  decideJoin,
+  leaveGroup,
+  renameGroup,
+  rotateInvite,
+} from "@/lib/office-actions";
 export default async function GroupPage({
   params,
 }: {
@@ -19,7 +25,7 @@ export default async function GroupPage({
   const { groupId } = await params;
   const data = await groupData(groupId);
   if (!data) notFound();
-  const { group, user, members, requests, expenses } = data;
+  const { group, user, members, requests, expenses, names } = data;
   const admin = group.owner_id === user.id;
   return (
     <AppShell>
@@ -103,9 +109,7 @@ export default async function GroupPage({
                         new Date(`${e.expense_date}T00:00:00Z`),
                         { dateStyle: "medium" },
                       )}{" "}
-                      ·{" "}
-                      {members.find((m) => m.user_id === e.creator_id)?.profile
-                        ?.name || t("member")}{" "}
+                      · {names.get(e.creator_id)?.name || t("member")}{" "}
                       {t("paidUpfront")}
                     </p>
                     <Badge status={e.status} />
@@ -120,7 +124,10 @@ export default async function GroupPage({
             <Empty>{t("noExpensesYetRecordTheFirst")}</Empty>
           )}
         </section>
-        <aside className="min-w-0 lg:sticky lg:top-24">
+        <aside
+          aria-label={t("groupDetails")}
+          className="min-w-0 lg:sticky lg:top-24"
+        >
           <section
             id="members"
             className="scroll-mt-44 mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6"
@@ -218,7 +225,30 @@ export default async function GroupPage({
                   </label>
                 </ActionForm>
               </section>
+              <DeleteGroupForm groupId={groupId} groupName={group.name} />
             </>
+          )}
+          {!admin && (
+            <details className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+              <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+                {t("leaveGroup")}
+              </summary>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                {t("leaveWarning")}
+              </p>
+              <ActionForm action={leaveGroup} label={t("confirmLeave")}>
+                <input type="hidden" name="groupId" value={groupId} />
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    name="confirmLeave"
+                    value="true"
+                    required
+                  />
+                  {t("leaveConfirmation")}
+                </label>
+              </ActionForm>
+            </details>
           )}
         </aside>
       </div>

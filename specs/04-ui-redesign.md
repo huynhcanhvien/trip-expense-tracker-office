@@ -224,3 +224,23 @@ bao gồm Recharts ở thống kê; menu theme tải khi người dùng mở.
 
 Lantern là lượt đối chiếu trước các chỉnh sửa cuối về viền input và vùng bấm;
 DevTools là lượt đo bản cuối. Thời điểm từng lượt được giữ trong JSON.
+
+## 9. Tính năng bổ sung sau redesign (2026-10-06)
+
+- Xóa nhóm: chỉ chủ nhóm được thực hiện, phải nhập đúng tên nhóm để xác nhận.
+  Xóa lịch sử chi phí, thanh toán và thành viên của nhóm; ảnh hóa đơn được đánh
+  dấu để cron dọn sau thời gian chờ, không còn quyền xem ngay sau khi xóa.
+- Rời nhóm: thành viên phải đối soát xong cả khoản phải trả và khoản phải thu.
+  Khoản đã báo chuyển tiền vẫn phải được người nhận xác nhận. Chủ nhóm không
+  được rời nhóm; lịch sử chi phí và tên người đã rời được giữ lại.
+- Thống kê: mỗi loại tiền có lựa chọn biểu đồ theo tháng hoặc ngày, cùng bảng
+  số tiền chính xác; mặc định theo tháng.
+- Kiểm chứng: 18 file, 155 unit/integration test qua; 26 E2E hồi quy qua,
+  2 skip, và 2 E2E tính năng mới trên desktop/mobile qua. Lint, format,
+  typecheck và production build qua. Các số Lighthouse ở mục 8 là baseline
+  của bản redesign, chưa đo lại cho phần bổ sung này.
+- Đã áp dụng hai migration `202610060001_delete_group.sql` và
+  `202610060002_leave_group.sql` lên Supabase production ngày 2026-10-06.
+  Code được phát hành qua PR vào `main`; xem [hướng dẫn triển khai](../docs/deployment.md).
+- Thử OCR với hóa đơn thật đã hoàn tất; kết quả và giới hạn được ghi ở
+  [05-ocr-receipt-experiment.md](05-ocr-receipt-experiment.md).

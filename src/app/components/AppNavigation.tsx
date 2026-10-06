@@ -76,13 +76,15 @@ export function MobileTabBar({ count }: { count: number }) {
   return (
     <div className="pointer-events-none fixed inset-x-4 bottom-3 z-40 mx-auto max-w-md pb-safe lg:hidden">
       {groupId && (
-        <Link
-          href={`/groups/${groupId}/expenses/new`}
-          className="pointer-events-auto absolute -top-16 right-1 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lift"
-        >
-          <Plus size={20} />
-          {t("addExpense")}
-        </Link>
+        <nav aria-label={t("groupActions")}>
+          <Link
+            href={`/groups/${groupId}/expenses/new`}
+            className="pointer-events-auto absolute -top-16 right-1 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lift"
+          >
+            <Plus size={20} />
+            {t("addExpense")}
+          </Link>
+        </nav>
       )}
       <div className="pointer-events-auto">
         <AppNavigation count={count} mobile />

@@ -10,6 +10,14 @@ const errorMessage = (error: { message: string }) => {
     "Authentication required": "Vui lòng đăng nhập để tiếp tục.",
     "Group owner required":
       "Chỉ quản trị viên nhóm được thực hiện thao tác này.",
+    "Group name confirmation required":
+      "Hãy nhập đúng tên nhóm để xác nhận xóa.",
+    "Group owner cannot leave":
+      "Quản trị viên không thể rời nhóm. Bạn có thể xóa nhóm trong cài đặt.",
+    "Outstanding group payments":
+      "Bạn cần thanh toán hết các khoản trong nhóm và được xác nhận đã nhận tiền trước khi rời nhóm.",
+    "Outstanding group receivables":
+      "Bạn cần nhận đủ và xác nhận các khoản người khác còn nợ bạn trong nhóm trước khi rời nhóm.",
     "Group membership required": "Bạn chưa được duyệt vào nhóm này.",
     "Invalid invitation": "Link mời không còn hiệu lực. Hãy xin link mới.",
     "Already a member": "Bạn đã là thành viên nhóm.",
@@ -74,6 +82,32 @@ export async function renameGroup(
   revalidatePath(`/groups/${id}`);
   revalidatePath("/");
   return { success: "Đã đổi tên nhóm." };
+}
+export async function deleteGroup(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const id = text(f, "groupId");
+  const { error } = await rpc("delete_group", {
+    p_group_id: id,
+    p_confirmation: text(f, "confirmation"),
+  });
+  if (error) return { error };
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+export async function leaveGroup(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  if (text(f, "confirmLeave") !== "true")
+    return { error: "Hãy xác nhận bạn muốn rời nhóm." };
+  const { error } = await rpc("leave_group", {
+    p_group_id: text(f, "groupId"),
+  });
+  if (error) return { error };
+  revalidatePath("/", "layout");
+  redirect("/");
 }
 export async function rotateInvite(
   _: OfficeState,

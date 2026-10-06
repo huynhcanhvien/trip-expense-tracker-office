@@ -35,7 +35,8 @@
     "notifications": "Thông báo",
     "profile": "Hồ sơ",
     "unread": "{count} chưa đọc",
-    "addExpense": "Khoản chi"
+    "addExpense": "Khoản chi",
+    "groupActions": "Thao tác trong nhóm"
   },
   "shell": {
     "brand": "Chia tiền",
@@ -132,7 +133,12 @@
     "summary": "{members} thành viên · {expenses} expense",
     "members": "Thành viên",
     "manage": "Quản lý",
-    "sections": "Các phần của nhóm"
+    "sections": "Các phần của nhóm",
+    "leaveGroup": "Rời nhóm",
+    "leaveWarning": "Bạn chỉ có thể rời nhóm khi mọi khoản phải trả đã được người ứng tiền xác nhận, và mọi khoản người khác nợ bạn đã được bạn xác nhận đã nhận. Khoản chi đã hủy không tính; không bù trừ tiền phải trả và phải thu. Lịch sử khoản chi và thanh toán được giữ lại; bạn sẽ mất quyền xem nhóm và cần xin tham gia lại nếu muốn quay lại.",
+    "confirmLeave": "Xác nhận rời nhóm",
+    "leaveConfirmation": "Tôi muốn rời nhóm này",
+    "groupDetails": "Thành viên và quản lý nhóm"
   },
   "newExpense": {
     "createExpense": "Tạo expense",
@@ -219,7 +225,14 @@
     "month": "Tháng",
     "amount": "Số tiền",
     "chartLabel": "Biểu đồ chi tiêu theo tháng ({currency})",
-    "monthlyData": "Số liệu theo tháng"
+    "monthlyData": "Số liệu theo tháng",
+    "dailySpending": "Chi tiêu theo ngày",
+    "chartInterval": "Hiển thị theo ({currency})",
+    "byMonth": "Theo tháng",
+    "byDay": "Theo ngày",
+    "dailyChartLabel": "Biểu đồ chi tiêu theo ngày ({currency})",
+    "dailyData": "Xem số liệu theo ngày",
+    "day": "Ngày"
   },
   "notifications": {
     "notifications": "Thông báo",
@@ -401,5 +414,13 @@
     "privacyTitle": "Chính sách quyền riêng tư",
     "termsTitle": "Điều khoản sử dụng",
     "updated": "Cập nhật: {date}"
+  },
+  "deleteGroup": {
+    "title": "Xóa nhóm",
+    "warning": "Thao tác này không thể hoàn tác. Tất cả khoản chi, phần chia tiền, lịch sử thanh toán và thông báo của nhóm sẽ bị xóa. Link mời sẽ hết hiệu lực. Ảnh hóa đơn sẽ được dọn; tài khoản và QR ngân hàng cá nhân được giữ lại.",
+    "confirmationLabel": "Nhập tên nhóm để xác nhận",
+    "confirm": "Xóa nhóm vĩnh viễn",
+    "pending": "Đang xóa…",
+    "cancel": "Giữ nhóm"
   }
 }

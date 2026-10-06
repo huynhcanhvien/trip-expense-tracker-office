@@ -675,4 +675,260 @@ describe("Supabase office migration: actual PostgreSQL functions and RLS", () =>
       /rate limit/i,
     );
   });
+  it("allows only the owner to delete with an exact name and atomically queues receipts for cleanup", async () => {
+    const group = await groupWithMember();
+    const token = (
+      await db.query<{ invite_token: string }>(
+        "select invite_token from office_groups where id=$1",
+        [group],
+      )
+    ).rows[0].invite_token;
+    const receipt = await rpc<{ id: string; path: string }>(
+      member,
+      "register_upload",
+      [group, "receipt", "jpg"],
+    );
+    const unattached = await rpc<{ id: string }>(owner, "register_upload", [
+      group,
+      "receipt",
+      "jpg",
+    ]);
+    const qr = await rpc<{ id: string }>(owner, "register_upload", [
+      null,
+      "qr",
+      "jpg",
+    ]);
+    await db.query("update uploads set preview_path=path where id in ($1,$2)", [
+      receipt.id,
+      qr.id,
+    ]);
+    await rpc(owner, "save_bank_profile", ["VCB", "12345", "OWNER", "", qr.id]);
+    const id = await rpc<string>(member, "save_expense", [
+      null,
+      group,
+      "Receipt",
+      "100",
+      "2026-10-06",
+      "even",
+      JSON.stringify([{ userId: owner }, { userId: member }]),
+      receipt.id,
+    ]);
+    await rpc(owner, "payment_action", [id, "report", owner]);
+    await rpc(member, "payment_action", [id, "confirm", owner]);
+    const other = await groupWithMember();
+    const otherExpense = await expense(other);
+    await expect(
+      asUser(null, "select delete_group($1,$2)", [group, "Kiểm thử"]),
+    ).rejects.toThrow(/permission denied/i);
+    for (const user of [member, outsider])
+      await expect(
+        rpc(user, "delete_group", [group, "Kiểm thử"]),
+      ).rejects.toThrow(/owner/i);
+    for (const name of [null, "", "Wrong name"])
+      await expect(rpc(owner, "delete_group", [group, name])).rejects.toThrow(
+        /confirmation/i,
+      );
+    expect(
+      (await db.query("select id from office_expenses where id=$1", [id])).rows,
+    ).toHaveLength(1);
+    await rpc(owner, "delete_group", [group, "Kiểm thử"]);
+    for (const table of [
+      "office_groups",
+      "office_expenses",
+      "group_members",
+      "join_requests",
+      "notifications",
+    ]) {
+      const column = table === "office_groups" ? "id" : "group_id";
+      expect(
+        (await db.query(`select * from ${table} where ${column}=$1`, [group]))
+          .rows,
+      ).toHaveLength(0);
+    }
+    for (const table of ["office_shares", "payment_events"])
+      expect(
+        (await db.query(`select * from ${table} where expense_id=$1`, [id]))
+          .rows,
+      ).toHaveLength(0);
+    await expect(rpc(member, "invite_info", [token])).rejects.toThrow(
+      /Invalid invitation/i,
+    );
+    const uploads = (
+      await db.query<{
+        group_id: string | null;
+        attached: boolean;
+        deleting_at: string | null;
+      }>("select * from uploads where id in ($1,$2)", [
+        receipt.id,
+        unattached.id,
+      ])
+    ).rows;
+    expect(uploads).toHaveLength(2);
+    for (const upload of uploads)
+      expect(upload).toMatchObject({
+        group_id: null,
+        attached: false,
+        deleting_at: expect.anything(),
+      });
+    expect(
+      (await asUser(member, "select * from uploads where id=$1", [receipt.id]))
+        .rows,
+    ).toHaveLength(0);
+    expect(await rpc<boolean>(member, "can_view_upload", [receipt.id])).toBe(
+      false,
+    );
+    expect(
+      (
+        await db.query("select * from office_expenses where id=$1", [
+          otherExpense,
+        ])
+      ).rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await db.query("select * from bank_profiles where qr_upload_id=$1", [
+          qr.id,
+        ])
+      ).rows,
+    ).toHaveLength(1);
+    // Fresh tombstones wait out upload tokens before removing Storage paths.
+    const fresh = await db.transaction(async (tx) => {
+      await tx.exec("set local role service_role");
+      return tx.query<{ id: string }>(
+        "select id from claim_cleanup_uploads(now()-interval '24 hours',100)",
+      );
+    });
+    expect(fresh.rows.map((r) => r.id)).not.toContain(receipt.id);
+    expect(fresh.rows.map((r) => r.id)).not.toContain(unattached.id);
+    await db.query(
+      "update uploads set created_at=now()-interval '2 days' where id in ($1,$2)",
+      [receipt.id, unattached.id],
+    );
+    const claimed = await db.transaction(async (tx) => {
+      await tx.exec("set local role service_role");
+      return tx.query<{ id: string }>(
+        "select id from claim_cleanup_uploads(now()-interval '24 hours',100)",
+      );
+    });
+    expect(claimed.rows.map((r) => r.id)).toEqual(
+      expect.arrayContaining([receipt.id, unattached.id]),
+    );
+    expect(claimed.rows.map((r) => r.id)).not.toContain(qr.id);
+  });
+
+  it("blocks leaving while payments are pending or reported and preserves confirmed history", async () => {
+    const group = await groupWithMember();
+    const id = await expense(group);
+    await expect(
+      asUser(null, "select leave_group($1)", [group]),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(rpc(owner, "leave_group", [group])).rejects.toThrow(
+      /owner cannot leave/i,
+    );
+    await expect(rpc(outsider, "leave_group", [group])).rejects.toThrow(
+      /membership/i,
+    );
+    await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+      /Outstanding/i,
+    );
+    await rpc(member, "payment_action", [id, "report", member]);
+    await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+      /Outstanding/i,
+    );
+    await rpc(owner, "payment_action", [id, "confirm", member]);
+    await rpc(member, "leave_group", [group]);
+    expect(
+      (await asUser(member, "select * from office_groups where id=$1", [group]))
+        .rows,
+    ).toHaveLength(0);
+    expect(
+      (
+        await db.query(
+          "select * from office_shares where expense_id=$1 and user_id=$2",
+          [id, member],
+        )
+      ).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query("select * from payment_events where expense_id=$1", [id]))
+        .rows,
+    ).toHaveLength(2);
+    expect(
+      (await asUser(owner, "select id from profiles where id=$1", [member]))
+        .rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await db.query(
+          "select * from notifications where group_id=$1 and user_id=$2",
+          [group, member],
+        )
+      ).rows,
+    ).toHaveLength(0);
+    // A stale writer cannot add a new obligation after membership removal.
+    await expect(
+      db.query(
+        "insert into office_shares(expense_id,user_id,amount,payment_status) values($1,$2,10,'pending')",
+        [id, member],
+      ),
+    ).rejects.toThrow(/not approved/i);
+    const token = (
+      await db.query<{ invite_token: string }>(
+        "select invite_token from office_groups where id=$1",
+        [group],
+      )
+    ).rows[0].invite_token;
+    const request = await rpc<string>(member, "request_join", [token]);
+    await rpc(owner, "decide_join", [request, true]);
+    expect(
+      (await asUser(member, "select * from office_groups where id=$1", [group]))
+        .rows,
+    ).toHaveLength(1);
+  });
+
+  it("requires incoming payments to be confirmed without netting and ignores cancelled, zero and self shares", async () => {
+    const group = await groupWithMember();
+    const id = await expense(group);
+    await rpc(owner, "cancel_expense", [id, "Cancelled"]);
+    await expense(
+      group,
+      "10",
+      [
+        { userId: owner, amount: "10" },
+        { userId: member, amount: "0" },
+      ] as never,
+      "custom",
+    );
+    const receivable = await rpc<string>(member, "save_expense", [
+      null,
+      group,
+      "Member paid",
+      "200",
+      "2026-10-06",
+      "even",
+      JSON.stringify([{ userId: owner }, { userId: member }]),
+      null,
+    ]);
+    const payable = await expense(group);
+    await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+      /Outstanding/i,
+    );
+    await rpc(owner, "cancel_expense", [payable, "Cancelled"]);
+    await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+      /receivables/i,
+    );
+    await rpc(owner, "payment_action", [receivable, "report", owner]);
+    await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+      /receivables/i,
+    );
+    await rpc(member, "payment_action", [receivable, "confirm", owner]);
+    await rpc(member, "leave_group", [group]);
+    expect(
+      (
+        await db.query("select * from office_expenses where group_id=$1", [
+          group,
+        ])
+      ).rows,
+    ).toHaveLength(4);
+  });
 });

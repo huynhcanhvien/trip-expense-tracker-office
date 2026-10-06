@@ -27,6 +27,7 @@ export type CurrencyStats = {
   totals: Totals;
   people: PersonTotals[];
   months: { month: string; amount: string }[];
+  days: { day: string; amount: string }[];
 };
 const add = (a: string, b: string) => new Big(a).plus(b).toString();
 const empty = (): Totals => ({
@@ -62,6 +63,7 @@ export function calculateStats(
       totals: Totals;
       people: Map<string, PersonTotals>;
       months: Map<string, string>;
+      days: Map<string, string>;
     }
   >();
   for (const group of groups) {
@@ -70,6 +72,7 @@ export function calculateStats(
         totals: empty(),
         people: new Map(),
         months: new Map(),
+        days: new Map(),
       });
   }
   for (const e of expenses) {
@@ -99,6 +102,10 @@ export function calculateStats(
     if (e.status === "completed") b.totals.completed++;
     const month = e.expense_date.slice(0, 7);
     b.months.set(month, add(b.months.get(month) || "0", e.amount));
+    b.days.set(
+      e.expense_date,
+      add(b.days.get(e.expense_date) || "0", e.amount),
+    );
     person(e.creator_id).advanced = add(
       person(e.creator_id).advanced,
       e.amount,
@@ -140,5 +147,8 @@ export function calculateStats(
     months: [...b.months]
       .sort(([a], [z]) => a.localeCompare(z))
       .map(([month, amount]) => ({ month, amount })),
+    days: [...b.days]
+      .sort(([a], [z]) => a.localeCompare(z))
+      .map(([day, amount]) => ({ day, amount })),
   }));
 }
