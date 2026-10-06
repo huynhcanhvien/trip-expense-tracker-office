@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
@@ -9,19 +10,23 @@ export default async function NewExpensePage({
 }: {
   params: Promise<{ groupId: string }>;
 }) {
+  const t = await getTranslations("newExpense");
   const { groupId } = await params;
   const data = await groupMembersData(groupId);
   if (!data) notFound();
   return (
     <AppShell>
-      <Link href={`/groups/${groupId}`} className="back-link">
+      <Link
+        href={`/groups/${groupId}`}
+        className="mb-5 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-primary"
+      >
         ← {data.group.name}
       </Link>
       <Heading
-        title="Tạo expense"
-        description="Bạn là người đã ứng tiền. Chọn những người cùng chia khoản chi này."
+        title={t("createExpense")}
+        description={t("youPaidUpfrontSelectThePeople")}
       />
-      <div className="narrow">
+      <div className="mx-auto w-full max-w-3xl">
         <ExpenseEditor
           groupId={groupId}
           currency={data.group.currency}

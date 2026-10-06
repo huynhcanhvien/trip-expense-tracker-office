@@ -1,6 +1,9 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Local object URLs display private camera previews without an image proxy. */
 
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localizeServerMessage } from "@/i18n/server-messages";
 import { useEffect, useRef, useState } from "react";
 import { Upload } from "tus-js-client";
 
@@ -93,6 +96,8 @@ export default function ImageUpload({
   onUploaded,
   onBusyChange,
 }: Props) {
+  const t = useTranslations("upload");
+  const locale = useLocale();
   const camera = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const task = useRef<Upload | null>(null);
@@ -202,32 +207,32 @@ export default function ImageUpload({
   }
 
   return (
-    <div className="image-upload">
+    <div>
       <div
-        className="button-row"
+        className="flex flex-wrap items-center gap-2"
         style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
       >
         {kind === "receipt" && (
           <button
             type="button"
-            className="button secondary"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-input bg-surface-raised text-foreground hover:bg-muted"
             disabled={busy}
             onClick={() => camera.current?.click()}
           >
-            Chụp hóa đơn
+            {t("captureReceipt")}
           </button>
         )}
         <button
           type="button"
-          className="button secondary"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-input bg-surface-raised text-foreground hover:bg-muted"
           disabled={busy}
           onClick={() => picker.current?.click()}
         >
           {preview
-            ? "Đổi ảnh"
+            ? t("changeImage")
             : kind === "qr"
-              ? "Chọn ảnh QR ngân hàng"
-              : "Chọn ảnh"}
+              ? t("chooseBankQRImage")
+              : t("chooseImage")}
         </button>
       </div>
       <input
@@ -254,7 +259,7 @@ export default function ImageUpload({
       {preview && (
         /* Local object URL; no public image optimization service. */ <img
           src={preview}
-          alt={kind === "qr" ? "Ảnh QR đã chọn" : "Ảnh hóa đơn đã chọn"}
+          alt={kind === "qr" ? t("selectedQRImage") : t("selectedReceiptImage")}
           style={{
             maxWidth: "100%",
             maxHeight: 280,
@@ -266,25 +271,31 @@ export default function ImageUpload({
       )}
       {busy && (
         <progress
-          aria-label="Tiến độ tải ảnh"
+          aria-label={t("uploadProgress")}
           max={100}
           value={progress}
           style={{ display: "block", width: "100%", marginTop: 8 }}
         />
       )}
       {step && (
-        <p aria-live="polite" className="muted">
-          {step}
+        <p
+          aria-live="polite"
+          className="mt-2 text-sm leading-7 text-muted-foreground"
+        >
+          {localizeServerMessage(step, locale)}
           {busy && progress > 0 ? ` ${progress}%` : ""}
         </p>
       )}
       {error && (
-        <p role="alert" className="form-error">
-          {error}
+        <p
+          role="alert"
+          className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+        >
+          {localizeServerMessage(error, locale)}
         </p>
       )}
-      <p className="muted">
-        JPEG, PNG, WebP hoặc HEIC · tối đa {kind === "qr" ? 5 : 15} MB.
+      <p className="mt-2 text-sm leading-7 text-muted-foreground">
+        {t("fileHint", { size: kind === "qr" ? 5 : 15 })}
       </p>
     </div>
   );

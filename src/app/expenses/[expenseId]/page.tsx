@@ -1,3 +1,4 @@
+import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Big from "big.js";
@@ -9,19 +10,22 @@ import { Heading, Badge, Empty, money } from "@/app/components/OfficeUI";
 import { expenseData, checked, collectRows } from "@/lib/office-data";
 import { paymentAction, cancelExpense } from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
-const eventLabels: Record<string, string> = {
-  report: "Báo đã chuyển",
-  confirm: "Xác nhận đã nhận",
-  reject: "Từ chối báo chuyển",
-  cancel: "Hủy expense",
-  create: "Tạo expense",
-  update: "Cập nhật expense",
-};
 export default async function ExpensePage({
   params,
 }: {
   params: Promise<{ expenseId: string }>;
 }) {
+  const t = await getTranslations("expense");
+  const format = await getFormatter();
+  const eventLabels: Record<string, string> = {
+    report: t("transferReported"),
+    confirm: t("confirmReceipt"),
+    reject: t("transferReportRejected"),
+    cancel: t("cancelExpense"),
+    create: t("createExpense"),
+    update: t("expenseUpdated"),
+  };
+
   const { expenseId } = await params;
   const data = await expenseData(expenseId);
   if (!data) notFound();
@@ -57,37 +61,56 @@ export default async function ExpensePage({
   const received = confirmed.reduce((sum, s) => sum.plus(s.amount), new Big(0));
   return (
     <AppShell>
-      <Link href={`/groups/${group.id}`} className="back-link">
+      <Link
+        href={`/groups/${group.id}`}
+        className="mb-5 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-primary"
+      >
         ← {group.name}
       </Link>
       <Heading
-        eyebrow={`${expense.expense_date} · ${names.get(expense.creator_id)?.name || "Thành viên"} ứng tiền`}
+        eyebrow={t("payerLine", {
+          date: format.dateTime(new Date(`${expense.expense_date}T00:00:00Z`), {
+            dateStyle: "medium",
+          }),
+          name: names.get(expense.creator_id)?.name || t("member"),
+        })}
         title={expense.description}
       >
-        <div className="heading-amount">
-          <strong>{money(expense.amount, group.currency)}</strong>
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <strong className="text-3xl font-bold tabular-nums">
+            {money(expense.amount, group.currency)}
+          </strong>
           <Badge status={expense.status} />
         </div>
       </Heading>
       {expense.status === "cancelled" && (
-        <div className="notice">
-          Đã hủy: {expense.cancel_reason}. Tiền đã xác nhận{" "}
-          {money(received.toString(), group.currency)} cần được đối soát hoặc
-          hoàn trả bên ngoài app.
+        <div className="my-5 rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm leading-7 text-warning">
+          {t("cancelledNotice", {
+            reason: expense.cancel_reason || "",
+            amount: money(received.toString(), group.currency),
+          })}
         </div>
       )}
-      <div className="office-grid">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <div>
-          <section className="card">
-            <div className="card-head">
-              <h2>Phần chia và thanh toán</h2>
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2>{t("sharesAndRepayments")}</h2>
               {creator && expense.status !== "cancelled" && (
-                <Link href={`/expenses/${expense.id}/edit`}>Chỉnh sửa</Link>
+                <Link
+                  href={`/expenses/${expense.id}/edit`}
+                  className="inline-flex min-h-11 items-center text-xs font-semibold text-primary"
+                >
+                  {t("edit")}
+                </Link>
               )}
             </div>
-            <p className="muted">
-              {confirmed.length}/{required.length} người cần chuyển đã xác nhận
-              · Đã nhận {money(received.toString(), group.currency)}
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {t("progress", {
+                confirmed: confirmed.length,
+                required: required.length,
+                amount: money(received.toString(), group.currency),
+              })}
             </p>
             <progress
               max={Math.max(required.length, 1)}
@@ -96,30 +119,32 @@ export default async function ExpensePage({
                   ? Math.max(required.length, 1)
                   : confirmed.length
               }
-              aria-label="Tiến độ thanh toán"
+              aria-label={t("repaymentProgress")}
             />
             {shares.map((s) => (
-              <div className="payment-row" key={s.user_id}>
-                <div className="office-row">
-                  <div className="grow">
-                    <strong>
-                      {names.get(s.user_id)?.name || "Thành viên"}
-                      {s.user_id === user.id ? " (bạn)" : ""}
+              <div key={s.user_id}>
+                <div className="flex min-w-0 flex-wrap items-center gap-3 border-b py-4 last:border-0">
+                  <div className="min-w-0 flex-1 wrap-anywhere">
+                    <strong className="text-sm font-semibold">
+                      {names.get(s.user_id)?.name || t("member")}
+                      {s.user_id === user.id ? t("you") : ""}
                     </strong>
                     <p>
                       <Badge status={s.payment_status} />
                     </p>
                   </div>
-                  <strong>{money(s.amount, group.currency)}</strong>
+                  <strong className="shrink-0 text-sm font-bold tabular-nums">
+                    {money(s.amount, group.currency)}
+                  </strong>
                 </div>
                 {expense.status === "active" && (
-                  <div className="inline-actions">
+                  <div className="flex flex-wrap items-center gap-2">
                     {s.user_id === user.id &&
                       s.payment_status === "pending" && (
                         <ActionForm
                           action={paymentAction}
-                          label="Tôi đã chuyển tiền"
-                          className="inline-form"
+                          label={t("iHaveTransferred")}
+                          className="flex max-w-full flex-wrap items-center gap-2"
                         >
                           <input
                             type="hidden"
@@ -151,10 +176,10 @@ export default async function ExpensePage({
                           action={paymentAction}
                           label={
                             operation === "confirm"
-                              ? "Xác nhận đã nhận"
-                              : "Chưa nhận / từ chối"
+                              ? t("confirmReceipt")
+                              : t("notReceivedReject")
                           }
-                          className="inline-form"
+                          className="flex max-w-full flex-wrap items-center gap-2"
                         >
                           <input
                             type="hidden"
@@ -183,48 +208,64 @@ export default async function ExpensePage({
               </div>
             ))}
           </section>
-          <section className="card">
-            <h2>Lịch sử</h2>
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <h2>{t("history")}</h2>
             {events.length ? (
-              <ol className="timeline">
+              <ol className="mt-5 space-y-5 border-l-2 border-primary-soft pl-5">
                 {events.map((event, index) => (
-                  <li key={event.id || index}>
+                  <li
+                    key={event.id || index}
+                    className="relative text-sm before:absolute before:-left-[27px] before:top-1 before:size-2.5 before:rounded-full before:bg-primary before:content-['']"
+                  >
                     <strong>{eventLabels[event.action] || event.action}</strong>
-                    <p className="muted">
-                      {names.get(event.actor_id)?.name || "Thành viên"}
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {names.get(event.actor_id)?.name || t("member")}
                       {event.user_id && event.user_id !== event.actor_id
-                        ? ` · ${names.get(event.user_id)?.name || "Thành viên"}`
+                        ? ` · ${names.get(event.user_id)?.name || t("member")}`
                         : ""}{" "}
                       ·{" "}
-                      {new Date(event.created_at).toLocaleString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
+                      {format.dateTime(new Date(event.created_at), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
                       })}
                     </p>
                   </li>
                 ))}
               </ol>
             ) : (
-              <Empty>Chưa có thao tác thanh toán.</Empty>
+              <Empty>{t("noRepaymentActivityYet")}</Empty>
             )}
           </section>
         </div>
-        <aside>
-          <section className="card">
-            <h2>Chuyển cho người ứng tiền</h2>
+        <aside className="min-w-0 lg:sticky lg:top-24">
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <h2>{t("transferToThePersonWhoPaid")}</h2>
             {bank ? (
               <>
-                <dl className="bank-details">
-                  <dt>Ngân hàng</dt>
-                  <dd>{bank.bank_name}</dd>
-                  <dt>Chủ tài khoản</dt>
-                  <dd>{bank.account_holder}</dd>
-                  <dt>Số tài khoản</dt>
-                  <dd>
+                <dl className="mt-5 space-y-2">
+                  <dt className="mt-4 text-xs text-muted-foreground">
+                    {t("bank")}
+                  </dt>
+                  <dd className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere">
+                    {bank.bank_name}
+                  </dd>
+                  <dt className="mt-4 text-xs text-muted-foreground">
+                    {t("accountHolder")}
+                  </dt>
+                  <dd className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere">
+                    {bank.account_holder}
+                  </dd>
+                  <dt className="mt-4 text-xs text-muted-foreground">
+                    {t("accountNumber")}
+                  </dt>
+                  <dd className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere">
                     {bank.account_number}{" "}
                     <CopyButton value={bank.account_number} />
                   </dd>
-                  <dt>Nội dung chuyển khoản</dt>
-                  <dd>
+                  <dt className="mt-4 text-xs text-muted-foreground">
+                    {t("transferReference")}
+                  </dt>
+                  <dd className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere">
                     {bank.transfer_template || expense.description}{" "}
                     <CopyButton
                       value={bank.transfer_template || expense.description}
@@ -233,45 +274,44 @@ export default async function ExpensePage({
                 </dl>
                 {bank.qr_upload_id && (
                   <SavedImage
-                    className="qr-image"
+                    className="mx-auto mt-5 max-h-72 rounded-xl"
                     uploadId={bank.qr_upload_id}
-                    alt="Mã QR ngân hàng người ứng tiền"
+                    alt={t("bankQRCodeOfThePerson")}
                   />
                 )}
               </>
             ) : (
-              <p className="muted">
-                Người ứng tiền chưa thêm thông tin ngân hàng. Hãy liên hệ trực
-                tiếp để chuyển tiền.
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                {t("thePersonWhoPaidHasNot")}
               </p>
             )}
-            <p className="muted">
-              Sau khi chuyển, đánh dấu phần của bạn là đã chuyển để người ứng
-              tiền xác nhận.
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {t("afterTransferringMarkYourShareAs")}
             </p>
           </section>
           {expense.receipt_upload_id && (
-            <section className="card">
-              <h2>Hóa đơn đính kèm</h2>
+            <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+              <h2>{t("attachedReceipt")}</h2>
               <SavedImage
-                className="receipt-image"
+                className="mt-5 w-full"
                 uploadId={expense.receipt_upload_id}
-                alt="Hóa đơn đính kèm"
+                alt={t("attachedReceipt")}
               />
             </section>
           )}
           {creator && expense.status !== "cancelled" && (
-            <details className="card">
-              <summary>Hủy expense</summary>
-              <p className="muted">
-                Lịch sử và tiền đã xác nhận được giữ lại để đối soát. Hoàn tiền
-                bên ngoài app.
+            <details className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+              <summary className="flex min-h-11 items-center font-semibold text-danger">
+                {t("cancelExpense")}
+              </summary>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                {t("historyAndConfirmedPaymentsAreKept")}
               </p>
-              <ActionForm action={cancelExpense} label="Hủy expense">
+              <ActionForm action={cancelExpense} label={t("cancelExpense")}>
                 <input type="hidden" name="expenseId" value={expense.id} />
                 <input type="hidden" name="groupId" value={group.id} />
-                <label>
-                  Lý do hủy
+                <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+                  {t("cancellationReason")}
                   <input name="reason" required maxLength={500} />
                 </label>
               </ActionForm>

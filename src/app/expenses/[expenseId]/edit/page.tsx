@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
@@ -11,6 +12,7 @@ export default async function EditPage({
 }: {
   params: Promise<{ expenseId: string }>;
 }) {
+  const t = await getTranslations("editExpense");
   const { expenseId } = await params;
   const data = await expenseData(expenseId);
   if (
@@ -25,24 +27,27 @@ export default async function EditPage({
   if (!members) notFound();
   return (
     <AppShell>
-      <Link className="back-link" href={`/expenses/${expenseId}`}>
-        ← Chi tiết expense
+      <Link
+        className="mb-5 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-primary"
+        href={`/expenses/${expenseId}`}
+      >
+        {t("expenseDetails")}
       </Link>
       <Heading
-        title="Chỉnh sửa expense"
+        title={t("editExpense")}
         description={
           data.expense.has_reported
-            ? "Đã có người báo chuyển; chỉ có thể sửa mô tả và ngày."
-            : "Bạn có thể sửa phần chia trước lần báo chuyển đầu tiên."
+            ? t("aTransferHasBeenReportedOnly")
+            : t("youCanEditSharesUntilThe")
         }
       />
-      <div className="narrow">
+      <div className="mx-auto w-full max-w-3xl">
         {data.expense.has_reported ? (
-          <section className="card">
-            <ActionForm action={editMetadata} label="Lưu thay đổi">
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <ActionForm action={editMetadata} label={t("saveChanges")}>
               <input type="hidden" name="expenseId" value={expenseId} />
-              <label>
-                Mô tả
+              <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+                {t("description")}
                 <input
                   name="description"
                   defaultValue={data.expense.description}
@@ -50,8 +55,8 @@ export default async function EditPage({
                   maxLength={300}
                 />
               </label>
-              <label>
-                Ngày chi
+              <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+                {t("expenseDate")}
                 <input
                   name="expenseDate"
                   type="date"

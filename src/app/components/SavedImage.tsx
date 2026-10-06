@@ -1,5 +1,8 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Private signed URLs expire and must bypass public image optimization. */
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localizeServerMessage } from "@/i18n/server-messages";
 import { useEffect, useState } from "react";
 export default function SavedImage({
   uploadId,
@@ -10,6 +13,8 @@ export default function SavedImage({
   alt: string;
   className?: string;
 }) {
+  const t = useTranslations("savedImage");
+  const locale = useLocale();
   const [image, setImage] = useState<{
     id: string;
     url: string;
@@ -50,22 +55,30 @@ export default function SavedImage({
   if (current.error)
     return (
       <div>
-        <p role="alert" className="form-error">
-          {current.error}
+        <p
+          role="alert"
+          className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+        >
+          {localizeServerMessage(current.error, locale)}
         </p>
         <button
           type="button"
-          className="secondary"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-input bg-surface-raised text-foreground hover:bg-muted"
           onClick={() => {
             setImage({ id: uploadId, url: "", error: "" });
             setRetry((n) => n + 1);
           }}
         >
-          Tải lại ảnh
+          {t("reloadImage")}
         </button>
       </div>
     );
-  if (!current.url) return <p className="muted">Đang tải ảnh…</p>;
+  if (!current.url)
+    return (
+      <p className="mt-2 text-sm leading-7 text-muted-foreground">
+        {t("loadingImage")}
+      </p>
+    );
   return (
     <img
       src={current.url}

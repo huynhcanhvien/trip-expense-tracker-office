@@ -1,4 +1,7 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localizeServerMessage } from "@/i18n/server-messages";
 import { useActionState, useState } from "react";
 import { authenticate, googleSignIn } from "@/app/auth/actions";
 import SubmitButton from "@/app/components/SubmitButton";
@@ -12,23 +15,27 @@ export default function AuthForm({
   initialError?: string;
   message?: string;
 }) {
+  const t = useTranslations("auth");
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   return (
     <>
-      <div className="seg" aria-label="Tài khoản">
+      <div
+        className="my-5 flex gap-2 rounded-xl bg-muted p-1"
+        aria-label={t("account")}
+      >
         <button
           type="button"
-          className={`seg-btn ${mode === "signin" ? "active" : ""}`}
+          className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-surface ${mode === "signin" ? "bg-surface text-primary shadow-soft" : ""}`}
           onClick={() => setMode("signin")}
         >
-          Đăng nhập
+          {t("signIn")}
         </button>
         <button
           type="button"
-          className={`seg-btn ${mode === "signup" ? "active" : ""}`}
+          className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-surface ${mode === "signup" ? "active" : ""}`}
           onClick={() => setMode("signup")}
         >
-          Đăng ký
+          {t("signUp")}
         </button>
       </div>
       <CredentialsForm
@@ -40,17 +47,21 @@ export default function AuthForm({
       />
       <button
         type="button"
-        className="seg-btn"
+        className="min-h-11 flex-1 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-surface"
         onClick={() => setMode(mode === "forgot" ? "signin" : "forgot")}
       >
-        {mode === "forgot" ? "Quay lại đăng nhập" : "Quên mật khẩu?"}
+        {mode === "forgot" ? t("backToSignIn") : t("forgotYourPassword")}
       </button>
       {mode !== "forgot" && (
-        <form action={googleSignIn} className="auth-form">
+        <form
+          action={googleSignIn}
+          className="mt-5 flex min-w-0 flex-col gap-5"
+        >
           <input type="hidden" name="next" value={next} />
           <SubmitButton
-            label="Tiếp tục với Google"
-            pendingLabel="Đang kết nối…"
+            label={t("continueWithGoogle")}
+            pendingLabel={t("connecting")}
+            className="self-start"
           />
         </form>
       )}
@@ -69,24 +80,26 @@ function CredentialsForm({
   initialError?: string;
   message?: string;
 }) {
+  const t = useTranslations("auth");
+  const locale = useLocale();
   const [state, action] = useActionState(authenticate, {});
   return (
-    <form action={action} className="auth-form">
+    <form action={action} className="mt-5 flex min-w-0 flex-col gap-5">
       <input type="hidden" name="mode" value={mode} />
       <input type="hidden" name="next" value={next} />
       {mode === "signup" && (
-        <label>
-          Tên hiển thị
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("displayName")}
           <input name="name" required maxLength={100} autoComplete="name" />
         </label>
       )}
-      <label>
+      <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
         Email
         <input type="email" name="email" required autoComplete="email" />
       </label>
       {mode !== "forgot" && (
-        <label>
-          Mật khẩu
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("password")}
           <input
             name="password"
             type="password"
@@ -100,24 +113,31 @@ function CredentialsForm({
         </label>
       )}
       {(state.error || initialError) && (
-        <p className="form-error" role="alert">
-          {state.error || initialError}
+        <p
+          className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+          role="alert"
+        >
+          {localizeServerMessage(state.error || initialError, locale)}
         </p>
       )}
       {(state.message || message) && (
-        <p className="form-success" role="status">
-          {state.message || message}
+        <p
+          className="rounded-xl bg-success-soft p-3 text-sm leading-6 text-success"
+          role="status"
+        >
+          {localizeServerMessage(state.message || message, locale)}
         </p>
       )}
       <SubmitButton
         label={
           mode === "forgot"
-            ? "Gửi liên kết khôi phục"
+            ? t("sendRecoveryLink")
             : mode === "signup"
-              ? "Tạo tài khoản"
-              : "Đăng nhập"
+              ? t("createAccount")
+              : t("signIn")
         }
-        pendingLabel="Đang xử lý…"
+        pendingLabel={t("processing")}
+        className="self-start"
       />
     </form>
   );

@@ -1,3 +1,5 @@
+import { localizeServerMessage } from "@/i18n/server-messages";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
@@ -5,6 +7,9 @@ import { Heading, Empty } from "@/app/components/OfficeUI";
 import { officeContext, checked } from "@/lib/office-data";
 import { readNotification } from "@/lib/office-actions";
 export default async function NotificationsPage() {
+  const t = await getTranslations("notifications");
+  const format = await getFormatter();
+  const locale = await getLocale();
   const { supabase } = await officeContext();
   const rows = checked(
     await supabase
@@ -23,30 +28,35 @@ export default async function NotificationsPage() {
   return (
     <AppShell>
       <Heading
-        title="Thông báo"
-        description={`${rows.filter((r) => !r.read_at).length} thông báo chưa đọc trong 100 thông báo gần nhất`}
+        title={t("notifications")}
+        description={t("summary", {
+          count: rows.filter((r) => !r.read_at).length,
+        })}
       >
         <ActionForm
           action={readNotification}
-          label="Đánh dấu tất cả đã đọc"
-          className="inline-form"
+          label={t("markAllAsRead")}
+          className="flex max-w-full flex-wrap items-center gap-2"
         />
       </Heading>
-      <section className="card">
+      <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
         {!rows.length ? (
-          <Empty>Bạn chưa có thông báo.</Empty>
+          <Empty>{t("youHaveNoNotificationsYet")}</Empty>
         ) : (
-          <div className="office-list">
+          <div className="mt-3">
             {rows.map((r) => (
               <article
-                className={`office-row ${!r.read_at ? "unread" : ""}`}
+                className={`flex min-w-0 flex-wrap items-center gap-3 border-b py-4 last:border-0 ${!r.read_at ? "rounded-xl bg-primary-soft/40 px-3" : ""}`}
                 key={r.id}
               >
-                <div className="grow">
-                  <strong>{r.title}</strong>
-                  <p className="muted">
-                    {new Date(r.created_at).toLocaleString("vi-VN", {
-                      timeZone: "Asia/Ho_Chi_Minh",
+                <div className="min-w-0 flex-1 wrap-anywhere">
+                  <strong className="text-sm font-semibold">
+                    {localizeServerMessage(r.title, locale)}
+                  </strong>
+                  <p className="mt-2 text-muted-foreground text-xs">
+                    {format.dateTime(new Date(r.created_at), {
+                      dateStyle: "medium",
+                      timeStyle: "short",
                     })}
                   </p>
                   {(r.expense_id || r.group_id) && (
@@ -57,15 +67,15 @@ export default async function NotificationsPage() {
                           : `/groups/${r.group_id}`
                       }
                     >
-                      Xem chi tiết →
+                      {t("viewDetails")}
                     </Link>
                   )}
                 </div>
                 {!r.read_at && (
                   <ActionForm
                     action={readNotification}
-                    label="Đã đọc"
-                    className="inline-form"
+                    label={t("markAsRead")}
+                    className="flex max-w-full flex-wrap items-center gap-2"
                   >
                     <input type="hidden" name="notificationId" value={r.id} />
                   </ActionForm>

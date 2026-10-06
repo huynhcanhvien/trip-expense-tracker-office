@@ -1,70 +1,87 @@
+import { Wallet } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import ThemeToggle from "@/app/components/ui/theme-toggle";
+import LocaleSwitcher from "@/app/components/ui/locale-switcher";
 import Link from "next/link";
 import AuthForm from "./AuthForm";
 import { safeNext, supabaseConfigured } from "@/lib/supabase/config";
 import { PolicyLinks } from "../components/PublicPage";
-import OfficeIcon from "../components/OfficeIcon";
 
 export default async function Login({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  const t = await getTranslations("login");
   const params = await searchParams;
   return (
-    <div className="auth-layout">
-      <aside className="auth-art">
-        <Link className="brand" href="/">
-          <span className="brand-mark">
-            <OfficeIcon name="wallet" size={24} />
+    <div className="grid min-h-dvh lg:grid-cols-2">
+      <aside className="hidden flex-col justify-between bg-primary-soft p-12 text-primary-soft-foreground lg:flex">
+        <Link
+          className="flex items-center gap-3 text-lg font-extrabold text-foreground"
+          href="/"
+        >
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+            <Wallet size={24} />
           </span>
-          <span className="brand-text">
-            Chia tiền<span>VĂN PHÒNG</span>
+          <span>
+            {t("officeSplit")}
+            <span className="mt-1 block text-[9px] font-semibold tracking-[0.18em] text-muted-foreground">
+              {t("brandSub")}
+            </span>
           </span>
         </Link>
-        <div className="auth-art-copy">
-          <p className="eyebrow">CÙNG CHI TIÊU, CÙNG RÕ RÀNG</p>
-          <h2>
-            Một khoản chi chung.
-            <br />
-            <span>Nhẹ nhàng cho cả nhóm.</span>
-          </h2>
-          <p>
-            Ghi khoản đã ứng, chia đúng người và biết rõ khi nào mọi khoản hoàn
-            trả đã hoàn tất.
+        <div className="my-16 max-w-md space-y-6">
+          <p className="mb-2 font-bold uppercase tracking-[0.15em] text-primary text-sm leading-8">
+            {t("eyebrow")}
           </p>
+          <h2 className="text-4xl leading-snug">
+            {t("oneSharedExpense")}
+            <br />
+            <span>{t("easyForTheWholeGroup")}</span>
+          </h2>
+          <p className="text-sm leading-8">{t("recordWhatYouPaidSplitIt")}</p>
         </div>
-        <p className="auth-art-bottom">
-          Dùng trên máy tính và điện thoại · Riêng tư trong nhóm
-        </p>
+        <p className="text-xs">{t("desktopAndMobilePrivateWithinYour")}</p>
       </aside>
-      <main className="page auth-page">
-        <Link href="/" className="back-link">
-          ← Chia tiền văn phòng
+      <main className="mx-auto w-full max-w-xl px-4 py-10 flex flex-col justify-center">
+        <div className="mb-5 flex justify-end gap-2">
+          <ThemeToggle />
+          <LocaleSwitcher />
+        </div>
+        <Link
+          href="/"
+          className="mb-5 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-primary"
+        >
+          {t("officeSplitLabel")}
         </Link>
-        <section className="card">
-          <h1>Chia tiền dễ dàng</h1>
-          <p className="muted">Cùng nhóm ghi chi phí và xác nhận hoàn trả.</p>
+        <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+          <h1>{t("splitCostsEasily")}</h1>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            {t("recordExpensesTogetherAndConfirmRepayments")}
+          </p>
           {!supabaseConfigured() ? (
-            <div className="setup-panel" role="status">
-              <h2>Cấu hình ứng dụng</h2>
+            <div
+              className="mt-5 space-y-3 rounded-xl bg-warning-soft p-4 text-sm text-warning"
+              role="status"
+            >
+              <h2>{t("applicationSetup")}</h2>
               <p>
-                Tạo <code>.env.local</code> từ <code>.env.example</code>, điền
-                URL và publishable key Supabase, rồi áp dụng migration. Khi
-                deploy, khai báo biến môi trường trên Vercel.
+                {t("create")} <code>.env.local</code> {t("from")}{" "}
+                <code>.env.example</code>
+                {t("fillInTheSupabaseURLAnd")}
               </p>
-              <p>Xem README để cấu hình đăng nhập, lưu ảnh và quét hóa đơn.</p>
+              <p>{t("seeTheREADMEToConfigureSign")}</p>
             </div>
           ) : (
             <AuthForm
               next={safeNext(params.next)}
               initialError={
-                params.error
-                  ? "Liên kết đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng thử lại."
-                  : undefined
+                params.error ? t("thisSignInLinkIsInvalid") : undefined
               }
               message={
                 params.password === "updated"
-                  ? "Đã đổi mật khẩu. Đăng nhập lại để tiếp tục."
+                  ? t("passwordChangedSignInAgainTo")
                   : undefined
               }
             />

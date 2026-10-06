@@ -1,5 +1,6 @@
+import { getFormatter, getTranslations } from "next-intl/server";
 import Link from "next/link";
-import Big from "big.js";
+import MonthlySpending from "./MonthlySpending";
 import AppShell from "@/app/components/AppShell";
 import { Heading, Empty, money } from "@/app/components/OfficeUI";
 import {
@@ -25,6 +26,8 @@ export default async function StatisticsPage({
 }: {
   searchParams: Promise<{ group?: string; from?: string; to?: string }>;
 }) {
+  const t = await getTranslations("statistics");
+  const format = await getFormatter();
   const filters = await searchParams;
   const { supabase, user } = await officeContext();
   const groups = await groupsForUser();
@@ -85,14 +88,17 @@ export default async function StatisticsPage({
   return (
     <AppShell>
       <Heading
-        title="Thống kê"
-        description="Khoản chờ xác nhận vẫn tính là còn thiếu. Các tiền tệ được thống kê riêng."
+        title={t("statistics")}
+        description={t("paymentsAwaitingConfirmationStillCountAs")}
       />
-      <form className="card filter-form" method="get">
-        <label>
-          Nhóm
+      <form
+        className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6 flex flex-wrap items-end gap-4"
+        method="get"
+      >
+        <label className="flex flex-col gap-2 text-sm font-medium flex-1 min-w-[min(100%,150px)]">
+          {t("group")}
           <select name="group" defaultValue={filters.group || ""}>
-            <option value="">Tất cả nhóm</option>
+            <option value="">{t("allGroups")}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name} ({g.currency})
@@ -100,108 +106,139 @@ export default async function StatisticsPage({
             ))}
           </select>
         </label>
-        <label>
-          Từ ngày
+        <label className="flex flex-col gap-2 text-sm font-medium flex-1 min-w-[min(100%,150px)]">
+          {t("fromDate")}
           <input type="date" name="from" defaultValue={from} required />
         </label>
-        <label>
-          Đến ngày
+        <label className="flex flex-col gap-2 text-sm font-medium flex-1 min-w-[min(100%,150px)]">
+          {t("toDate")}
           <input type="date" name="to" defaultValue={to} required />
         </label>
-        <button>Lọc</button>
+        <button className="min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">
+          {t("filter")}
+        </button>
       </form>
       {from > to && (
-        <p role="alert" className="form-error">
-          Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
+        <p
+          role="alert"
+          className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+        >
+          {t("theStartDateMustBeOn")}
         </p>
       )}
-      {!stats.length && <Empty>Chưa có nhóm để thống kê.</Empty>}
+      {!stats.length && <Empty>{t("noGroupsToReportOnYet")}</Empty>}
       {stats.map((s) => (
-        <section key={s.currency} className="stats-section">
+        <section key={s.currency} className="mt-8 space-y-4">
           <h2>{s.currency}</h2>
-          <div className="metric-grid">
+          <div className="my-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[
-              ["Tổng chi", s.totals.spent],
-              ["Cần thu từ thành viên", s.totals.toCollect],
-              ["Đã xác nhận thu", s.totals.received],
-              ["Chờ xác nhận", s.totals.reported],
-              ["Còn thiếu (gồm chờ xác nhận)", s.totals.outstanding],
+              [t("totalSpending"), s.totals.spent],
+              [t("toCollectFromMembers"), s.totals.toCollect],
+              [t("confirmedReceipts"), s.totals.received],
+              [t("awaitingConfirmation"), s.totals.reported],
+              [t("outstandingIncludingUnconfirmed"), s.totals.outstanding],
             ].map(([label, amount]) => (
-              <div className="metric" key={label}>
-                <span>{label}</span>
-                <strong>{money(amount, s.currency)}</strong>
+              <div
+                className="flex min-w-0 flex-col gap-3 rounded-2xl border bg-surface p-5 shadow-soft"
+                key={label}
+              >
+                <span className="text-xs text-muted-foreground">{label}</span>
+                <strong className="text-2xl font-bold tabular-nums">
+                  {money(amount, s.currency)}
+                </strong>
               </div>
             ))}
-            <div className="metric">
-              <span>Expense hoàn tất</span>
-              <strong>{s.totals.completed}</strong>
+            <div className="flex min-w-0 flex-col gap-3 rounded-2xl border bg-surface p-5 shadow-soft">
+              <span className="text-xs text-muted-foreground">
+                {t("completedExpenses")}
+              </span>
+              <strong className="text-2xl font-bold tabular-nums">
+                {s.totals.completed}
+              </strong>
             </div>
           </div>
-          <div className="office-grid">
-            <section className="card">
-              <h3>Chi tiêu theo tháng</h3>
+          <div className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-2">
+            <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+              <h3>{t("monthlySpending")}</h3>
               {!s.months.length ? (
-                <Empty>Không có chi tiêu trong khoảng ngày này.</Empty>
+                <Empty>{t("noSpendingInThisDateRange")}</Empty>
               ) : (
-                <div className="bar-chart">
-                  {s.months.map((m) => {
-                    const max = s.months.reduce(
-                      (v, x) =>
-                        new Big(x.amount).gt(v) ? new Big(x.amount) : v,
-                      new Big(0),
-                    );
-                    const width = max.eq(0)
-                      ? 0
-                      : new Big(m.amount).div(max).times(100).toNumber();
-                    return (
-                      <div className="bar-row" key={m.month}>
-                        <span>{m.month}</span>
-                        <div className="bar-track">
-                          <div className="bar" style={{ width: `${width}%` }} />
-                        </div>
-                        <strong>{money(m.amount, s.currency)}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
+                <MonthlySpending months={s.months} currency={s.currency} />
               )}
             </section>
-            <section className="card">
-              <h3>Cá nhân bạn</h3>
-              <dl className="personal-stats">
+            <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+              <h3>{t("yourPersonalTotals")}</h3>
+              <dl className="mt-4">
                 {[
-                  ["Đã ứng", s.totals.advanced],
-                  ["Phần chi tiêu", s.totals.personalShare],
-                  ["Đã hoàn trả", s.totals.repaid],
-                  ["Còn phải trả", s.totals.toPay],
-                  ["Còn phải thu", s.totals.toReceive],
+                  [t("paidUpfront"), s.totals.advanced],
+                  [t("yourShareOfSpending"), s.totals.personalShare],
+                  [t("repaid"), s.totals.repaid],
+                  [t("stillToPay"), s.totals.toPay],
+                  [t("stillToReceive"), s.totals.toReceive],
                 ].map(([label, amount]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{money(amount, s.currency)}</dd>
+                  <div
+                    key={label}
+                    className="flex flex-wrap justify-between gap-3 border-b py-3 text-sm last:border-0"
+                  >
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="font-semibold tabular-nums">
+                      {money(amount, s.currency)}
+                    </dd>
                   </div>
                 ))}
               </dl>
             </section>
           </div>
-          <section className="card">
-            <h3>Theo thành viên</h3>
-            <div className="table-scroll">
-              <table>
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <h3>{t("byMember")}</h3>
+            <div className="hidden md:block mt-5 w-full overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
                 <thead>
                   <tr>
-                    <th>Thành viên</th>
-                    <th>Đã ứng</th>
-                    <th>Phần chi</th>
-                    <th>Đã trả</th>
-                    <th>Còn trả</th>
-                    <th>Còn thu</th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("member")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("paidUpfront")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("shareOfSpending")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("repaid")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("toPay")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="bg-muted text-xs font-semibold text-muted-foreground whitespace-nowrap border-b p-3 tabular-nums"
+                    >
+                      {t("toReceive")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {s.people.map((p) => (
                     <tr key={p.userId}>
-                      <td>{names.get(p.userId)?.name || "Thành viên"}</td>
+                      <td className="whitespace-nowrap border-b p-3 tabular-nums">
+                        {names.get(p.userId)?.name || t("member")}
+                      </td>
                       {[
                         p.advanced,
                         p.share,
@@ -209,37 +246,81 @@ export default async function StatisticsPage({
                         p.toPay,
                         p.toReceive,
                       ].map((v, i) => (
-                        <td key={i}>{money(v, s.currency)}</td>
+                        <td
+                          key={i}
+                          className="whitespace-nowrap border-b p-3 tabular-nums"
+                        >
+                          {money(v, s.currency)}
+                        </td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="muted">
-              Không bù trừ số phải trả và phải thu giữa các expense.
+            <div className="mt-5 grid gap-3 md:hidden">
+              {s.people.map((p) => (
+                <article
+                  className="rounded-xl border bg-surface-raised p-4"
+                  key={p.userId}
+                >
+                  <h4 className="mb-3 text-sm font-semibold">
+                    {names.get(p.userId)?.name || t("member")}
+                  </h4>
+                  <dl className="grid grid-cols-2 gap-3">
+                    {[
+                      [t("paidUpfront"), p.advanced],
+                      [t("shareOfSpending"), p.share],
+                      [t("repaid"), p.repaid],
+                      [t("toPay"), p.toPay],
+                      [t("toReceive"), p.toReceive],
+                    ].map(([label, amount]) => (
+                      <div className="min-w-0" key={label}>
+                        <dt className="text-xs text-muted-foreground">
+                          {label}
+                        </dt>
+                        <dd className="tabular mt-1 wrap-anywhere text-sm font-semibold">
+                          {money(amount, s.currency)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {t("amountsPayableAndReceivableAreNot")}
             </p>
           </section>
-          <div className="notice">
-            Tiền đã xác nhận trong expense hủy cần đối soát:{" "}
+          <div className="my-5 rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm leading-7 text-warning">
+            {t("confirmedPaymentsInCancelledExpensesTo")}{" "}
             {money(s.totals.cancelledReceived, s.currency)}
           </div>
         </section>
       ))}
-      <section className="card">
-        <h2>Expense đã hủy</h2>
+      <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+        <h2>{t("cancelledExpenses")}</h2>
         {!cancelled.length ? (
-          <Empty>Không có expense hủy trong khoảng ngày này.</Empty>
+          <Empty>{t("noCancelledExpensesInThisDate")}</Empty>
         ) : (
           cancelled.map((e) => (
-            <Link className="office-row" href={`/expenses/${e.id}`} key={e.id}>
-              <div className="grow">
-                <strong>{e.description}</strong>
-                <p className="muted">
-                  {e.expense_date} · {e.cancel_reason}
+            <Link
+              className="flex min-w-0 flex-wrap items-center gap-3 border-b py-4 last:border-0 rounded-xl px-2 transition-colors hover:bg-muted"
+              href={`/expenses/${e.id}`}
+              key={e.id}
+            >
+              <div className="min-w-0 flex-1 wrap-anywhere">
+                <strong className="text-sm font-semibold">
+                  {e.description}
+                </strong>
+                <p className="mt-2 text-muted-foreground text-xs">
+                  {format.dateTime(new Date(`${e.expense_date}T00:00:00Z`), {
+                    dateStyle: "medium",
+                  })}{" "}
+                  · {e.cancel_reason}
                 </p>
               </div>
-              <span>Xem đối soát →</span>
+              <span>{t("viewReconciliation")}</span>
             </Link>
           ))
         )}

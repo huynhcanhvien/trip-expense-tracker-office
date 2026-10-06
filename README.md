@@ -1,6 +1,6 @@
 # Chia tiền văn phòng
 
-Web app tiếng Việt để ứng tiền và thu lại tiền trong nhóm. Người tạo expense chọn
+Web app tiếng Việt/English để ứng tiền và thu lại tiền trong nhóm. Người tạo expense chọn
 người chia, thành viên báo đã chuyển, người ứng tiền xác nhận; expense hoàn tất
 khi tất cả khoản cần chuyển được xác nhận. Dùng cùng một URL trên PC và mobile.
 
@@ -27,9 +27,17 @@ khi tất cả khoản cần chuyển được xác nhận. Dùng cùng một UR
 Production chạy hoàn toàn trên cloud. Không cần máy cá nhân bật, SQLite, ổ đĩa
 uploads hay Ollama. Có thể nhập expense bằng tay khi OCR chưa được cấu hình.
 
+Giao diện dùng Tailwind CSS v4, Radix UI và Lucide với tông giấy kem/teal.
+`next-themes` lưu lựa chọn Sáng/Tối/Theo hệ thống; `next-intl` đọc cookie
+`NEXT_LOCALE` (mặc định `vi`) mà không đổi URL. Toàn bộ trang, form, policy và thông báo
+đã hỗ trợ Việt/English; ngày tháng theo ngôn ngữ đã chọn. Font chính là Be Vietnam Pro.
+Dashboard hiển thị khoản còn phải trả/phải thu riêng theo tiền tệ. Thống kê dùng
+Recharts tải riêng, có bảng số liệu tương đương và card thành viên trên mobile.
+Chi tiết trong [kế hoạch UI](specs/04-ui-redesign.md).
+
 ## Chạy phát triển
 
-Cần Node.js 22+ và npm. Dùng một project Supabase phát triển riêng hoặc chạy
+Cần Node.js 22.19+ và npm. Dùng một project Supabase phát triển riêng hoặc chạy
 Supabase local bằng Docker:
 
 ```bash
@@ -125,6 +133,26 @@ E2E dùng Next dev port 3100, build cache `.next-e2e` riêng và mock Groq local
 Nếu Chromium đã có sẵn trong cache Playwright (kể cả bản cài bằng Python),
 cấu hình tự tìm và dùng lại nên có thể bỏ bước tải browser. Có thể chỉ định
 đường dẫn binary bằng `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
+E2E kiểm tra theme/ngôn ngữ lưu qua reload, bàn phím, tương phản cả hai theme,
+layout mobile và luồng nghiệp vụ trên Supabase thật bằng axe-core.
+
+Đo hiệu năng và accessibility của bản production bằng Lighthouse:
+
+```bash
+npm run ui:audit
+```
+
+Mặc định dùng profile mobile và throttle trực tiếp bằng DevTools (CPU 4×,
+Slow 4G), xoá cache trước từng trang. `npm run ui:audit:simulate` chạy thêm
+mô phỏng Lantern để đối chiếu; số đo và ngưỡng được ghi rõ trong spec.
+
+Lệnh này build với cấu hình `.env.test.local`, chạy cổng 3200 và Chromium CDP 9223,
+tạo rồi dọn tài khoản/nhóm thử trên Supabase local. Cache browser được xoá trước
+mỗi trang; dashboard và biểu đồ thống kê có dữ liệu thật. Báo cáo HTML/JSON và ảnh
+ở `artifacts/ui-audit/devtools/` hoặc `artifacts/ui-audit/simulate/` (gitignore). Lệnh trả lỗi nếu LCP ≥ 2.5s, CLS ≥ 0.1,
+JavaScript ≥ 300 KB gzip hoặc Lighthouse accessibility dưới 100. Số đo local
+không thay thế kiểm tra trên môi trường deploy và thiết bị thực tế.
+
 Kiểm tra camera thực tế trên Safari iPhone và Chrome Android trước phát hành:
 quyền camera/bộ chọn ảnh, HEIC, mạng yếu và kiểm tra lại các trường đã quét.
 

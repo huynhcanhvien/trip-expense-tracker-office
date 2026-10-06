@@ -1,21 +1,27 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Wallet, Receipt, ArrowRight, LogOut } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { signOut } from "@/app/auth/actions";
 import { requireUser } from "@/lib/supabase/server";
 import { unreadNotifications } from "@/lib/office-data";
 import { PolicyLinks } from "./PublicPage";
-import AppNavigation from "./AppNavigation";
-import OfficeIcon from "./OfficeIcon";
+import AppNavigation, { MobileTabBar } from "./AppNavigation";
+import ThemeToggle from "./ui/theme-toggle";
+import LocaleSwitcher from "./ui/locale-switcher";
+import { buttonVariants } from "./ui/button";
 export default async function AppShell({ children }: { children: ReactNode }) {
-  const [{ user }, count] = await Promise.all([
+  const [{ user }, count, t, common] = await Promise.all([
     requireUser(),
     unreadNotifications(),
+    getTranslations("shell"),
+    getTranslations("common"),
   ]);
   const name = String(
     user.user_metadata?.name ||
       user.user_metadata?.full_name ||
       user.email?.split("@")[0] ||
-      "Tài khoản của bạn",
+      t("fallbackName"),
   );
   const initials = name
     .split(/\s+/)
@@ -24,90 +30,112 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     .join("")
     .toUpperCase();
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main-content">
-        Đến nội dung chính
+    <div className="min-h-dvh">
+      <a
+        className="fixed left-4 top-3 z-[100] -translate-y-24 rounded-xl bg-surface-raised px-4 py-3 shadow-lift focus:translate-y-0"
+        href="#main-content"
+      >
+        {common("skip")}
       </a>
-      <aside className="app-sidebar">
-        <Link className="brand" href="/">
-          <span className="brand-mark">
-            <OfficeIcon name="wallet" size={24} />
-          </span>
-          <span className="brand-text">
-            Chia tiền<span>VĂN PHÒNG</span>
-          </span>
-        </Link>
-        <p className="nav-eyebrow">KHÔNG GIAN CỦA BẠN</p>
-        <AppNavigation count={count || 0} />
-        <div className="sidebar-tip">
-          <span className="tip-icon">
-            <OfficeIcon name="receipt" size={25} />
-          </span>
-          <strong>Chi chung, rõ ràng.</strong>
-          <p>Ghi một khoản chi. Chia đúng người. Theo dõi đến khi hoàn tất.</p>
-          <Link href="/">
-            Về nhóm của bạn <OfficeIcon name="arrow" size={16} />
+      <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col overflow-hidden rounded-2xl border bg-surface p-5 shadow-soft lg:flex">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-lg font-extrabold text-foreground"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+              <Wallet size={24} />
+            </span>
+            <span>
+              {t("brand")}
+              <span className="mt-1 block text-[9px] font-semibold tracking-[0.18em] text-muted-foreground">
+                {t("brandSub")}
+              </span>
+            </span>
           </Link>
+          <p className="mb-4 mt-10 text-[10px] font-bold tracking-widest text-muted-foreground">
+            {t("yourSpace")}
+          </p>
+          <AppNavigation count={count || 0} />
+          <div className="mt-8 rounded-2xl bg-accent-soft p-5 text-accent-soft-foreground">
+            <Receipt className="mb-3" size={26} />
+            <strong className="text-sm">{t("tipTitle")}</strong>
+            <p className="mt-2 text-xs leading-6">{t("tipText")}</p>
+            <Link
+              href="/"
+              className="mt-3 inline-flex min-h-11 items-center gap-2 text-xs font-semibold"
+            >
+              {t("yourGroups")}
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
-        <div className="sidebar-bottom">
-          <div className="account-summary">
-            <span className="account-avatar">{initials}</span>
-            <div>
-              <strong>{name}</strong>
-              <span>Tài khoản cá nhân</span>
+        <div className="shrink-0 bg-surface pt-4">
+          <div className="flex min-w-0 items-center gap-3 border-t py-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary-soft-foreground">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <strong className="block truncate text-sm">{name}</strong>
+              <span className="text-xs text-muted-foreground">
+                {t("account")}
+              </span>
             </div>
           </div>
           <form action={signOut}>
-            <button className="signout-button">
-              <OfficeIcon name="logout" size={18} />
-              Đăng xuất
+            <button className={buttonVariants({ variant: "ghost" })}>
+              <LogOut />
+              {common("signOut")}
             </button>
           </form>
         </div>
       </aside>
-      <div className="app-workspace">
-        <header className="app-topbar">
-          <div className="workspace-label">
-            <span className="workspace-dot" />
-            <span>Không gian làm việc</span>
-          </div>
-          <Link className="mobile-brand" href="/">
-            <span className="brand-mark">
-              <OfficeIcon name="wallet" size={20} />
-            </span>
-            <strong>Chia tiền</strong>
+      <div className="flex min-h-dvh min-w-0 flex-col lg:pl-72">
+        <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-2 border-b bg-background/85 px-4 backdrop-blur-xl sm:px-8 lg:border-0">
+          <Link
+            href="/"
+            aria-label={t("brand")}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 text-sm font-bold lg:hidden"
+          >
+            <Wallet className="shrink-0 text-primary" size={23} />
+            <span className="hidden sm:inline">{t("brand")}</span>
           </Link>
-          <div className="topbar-right">
-            <span className="secure-label">
-              <OfficeIcon name="shield" size={15} />
-              Riêng tư trong nhóm
-            </span>
+          <span className="hidden text-sm text-muted-foreground lg:inline">
+            {t("workspace")}
+          </span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <LocaleSwitcher />
             <Link
-              className="topbar-avatar"
               href="/profile"
-              aria-label="Mở hồ sơ cá nhân"
+              aria-label={common("profile")}
+              className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary-soft-foreground min-[375px]:flex"
             >
-              {initials}
+              <span aria-hidden="true">{initials}</span>
             </Link>
-            <form action={signOut} className="mobile-signout">
+            <form action={signOut} className="lg:hidden">
               <button
                 type="submit"
-                className="icon-button"
-                aria-label="Đăng xuất"
+                aria-label={common("signOut")}
+                className={buttonVariants({ variant: "ghost", size: "icon" })}
               >
-                <OfficeIcon name="logout" />
+                <LogOut />
               </button>
             </form>
           </div>
         </header>
-        <main className="office-page" id="main-content">
+        <main
+          id="main-content"
+          className="mx-auto w-full max-w-[1280px] min-w-0 flex-1 p-4 pb-8 sm:p-8"
+        >
           {children}
         </main>
-        <footer className="office-footer">
-          <span>Ứng tiền rõ ràng · Chia sẻ nhẹ nhàng</span>
+        <footer className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-4 px-4 pb-32 pt-8 text-xs text-muted-foreground sm:px-8 lg:pb-8">
+          <span>{t("footer")}</span>
           <PolicyLinks />
         </footer>
       </div>
+      <MobileTabBar count={count || 0} />
     </div>
   );
 }

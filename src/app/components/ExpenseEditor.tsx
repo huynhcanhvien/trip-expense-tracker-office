@@ -1,4 +1,7 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import { localizeServerMessage } from "@/i18n/server-messages";
 import { useActionState, useId, useState } from "react";
 import Big from "big.js";
 import type { Expense, Member, OfficeState, Share } from "@/lib/office-types";
@@ -21,6 +24,8 @@ export default function ExpenseEditor({
   expense?: Expense;
   shares?: Share[];
 }) {
+  const t = useTranslations("editor");
+  const locale = useLocale();
   const [state, action] = useActionState<OfficeState, FormData>(
     saveExpense,
     {},
@@ -66,15 +71,15 @@ export default function ExpenseEditor({
     remaining = "—";
   }
   return (
-    <section className="card">
-      <div className="inline-actions">
+    <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="secondary"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-input bg-surface-raised text-foreground hover:bg-muted"
           disabled={mediaBusy}
           onClick={() => setScan(!scan)}
         >
-          {scan ? "Ẩn quét hóa đơn" : "Chụp / quét hóa đơn"}
+          {scan ? t("hideReceiptScanner") : t("captureScanReceipt")}
         </button>
       </div>
       {scan && (
@@ -91,7 +96,7 @@ export default function ExpenseEditor({
       )}
       <form
         action={action}
-        className="office-form"
+        className="mt-5 flex min-w-0 flex-col gap-5"
         onSubmit={(event) => {
           if (mediaBusy || amountError || customError) event.preventDefault();
         }}
@@ -109,24 +114,24 @@ export default function ExpenseEditor({
             })),
           )}
         />
-        <label>
-          Mô tả
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("description")}
           <input
             name="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
             maxLength={300}
-            placeholder="Ví dụ: Bữa trưa thứ Sáu"
+            placeholder={t("forExampleFridayLunch")}
           />
         </label>
-        <div className="field-row">
-          <label>
-            Tổng tiền ({currency})
+        <div className="flex flex-col gap-5 sm:flex-row">
+          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium flex-1">
+            {t("totalAmount", { currency })}
             <input
               name="amount"
               type="text"
-              aria-label={`Tổng tiền (${currency})`}
+              aria-label={t("totalAmount", { currency })}
               inputMode={dp ? "decimal" : "numeric"}
               pattern={moneyInputPattern(dp)}
               maxLength={32}
@@ -140,26 +145,31 @@ export default function ExpenseEditor({
             />
             <output
               id={`${moneyId}-amount-preview`}
-              className="muted"
+              className="mt-2 text-sm leading-7 text-muted-foreground"
               aria-live="polite"
               data-testid="expense-amount-preview"
             >
               {amount && !amountError
-                ? `Số tiền sẽ lưu: ${formatAmount(new Big(amount), currency as CurrencyCode)}`
-                : "Nhập tổng tiền, không dùng dấu phân cách hàng nghìn."}
+                ? t("amountPreview", {
+                    amount: formatAmount(
+                      new Big(amount),
+                      currency as CurrencyCode,
+                    ),
+                  })
+                : t("enterTheTotalWithoutThousandsSeparators")}
             </output>
             {amountError && (
               <span
                 id={`${moneyId}-amount-error`}
-                className="form-error"
+                className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
                 role="alert"
               >
-                {amountError}
+                {localizeServerMessage(amountError, locale)}
               </span>
             )}
           </label>
-          <label>
-            Ngày chi
+          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium flex-1">
+            {t("expenseDate")}
             <input
               name="expenseDate"
               type="date"
@@ -169,23 +179,26 @@ export default function ExpenseEditor({
             />
           </label>
         </div>
-        <label>
-          Cách chia
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("splitMethod")}
           <select
-            aria-label="Cách chia"
+            aria-label={t("splitMethod")}
             name="splitMode"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-            <option value="even">Chia đều</option>
-            <option value="custom">Nhập số tiền riêng</option>
+            <option value="even">{t("splitEqually")}</option>
+            <option value="custom">{t("enterIndividualAmounts")}</option>
           </select>
         </label>
-        <fieldset className="split-set">
-          <legend>
-            Người cùng chia ({selected.length}/{members.length})
+        <fieldset className="flex flex-col gap-4 rounded-xl border p-4">
+          <legend className="px-2 text-sm font-semibold">
+            {t("participants", {
+              selected: selected.length,
+              total: members.length,
+            })}
           </legend>
-          <label className="check">
+          <label className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-sm wrap-anywhere">
             <input
               type="checkbox"
               checked={selected.length === members.length}
@@ -195,11 +208,14 @@ export default function ExpenseEditor({
                 )
               }
             />
-            Chọn tất cả
+            {t("selectAll")}
           </label>
           {members.map((m) => (
-            <div className="split-member" key={m.user_id}>
-              <label className="check">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3"
+              key={m.user_id}
+            >
+              <label className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-sm wrap-anywhere">
                 <input
                   type="checkbox"
                   checked={selected.includes(m.user_id)}
@@ -211,14 +227,16 @@ export default function ExpenseEditor({
                     )
                   }
                 />
-                {m.profile?.name || "Thành viên"}
+                {m.profile?.name || t("member")}
               </label>
               {mode === "custom" && selected.includes(m.user_id) && (
-                <label className="share-amount">
-                  Số tiền
+                <label className="flex min-w-0 flex-col gap-2 text-sm font-medium w-36">
+                  {t("amount")}
                   <input
                     type="text"
-                    aria-label={`Phần của ${m.profile?.name || "thành viên"}`}
+                    aria-label={t("shareLabel", {
+                      name: m.profile?.name || t("member"),
+                    })}
                     inputMode={dp ? "decimal" : "numeric"}
                     pattern={moneyInputPattern(dp)}
                     maxLength={32}
@@ -238,13 +256,22 @@ export default function ExpenseEditor({
             </div>
           ))}
           {mode === "custom" && (
-            <p className={remaining === "0" ? "toast" : "form-error"}>
-              Chênh lệch so với tổng: {remaining} {currency}
+            <p
+              className={
+                remaining === "0"
+                  ? "rounded-xl bg-success-soft p-3 text-sm leading-6 text-success"
+                  : "rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+              }
+            >
+              {t("differenceFromTotal", { amount: remaining, currency })}
             </p>
           )}
           {customError && (
-            <p className="form-error" role="alert">
-              {customError}
+            <p
+              className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+              role="alert"
+            >
+              {localizeServerMessage(customError, locale)}
             </p>
           )}
         </fieldset>
@@ -252,24 +279,27 @@ export default function ExpenseEditor({
           <>
             <SavedImage
               uploadId={upload}
-              alt="Hóa đơn đang tạo"
-              className="receipt-image"
+              alt={t("receiptForThisExpense")}
+              className="mt-5 w-full"
             />
-            <p className="toast">
-              Đã đính kèm ảnh hóa đơn. Vui lòng kiểm tra các số liệu trước khi
-              lưu.
+            <p className="rounded-xl bg-success-soft p-3 text-sm leading-6 text-success">
+              {t("receiptImageAttachedPleaseCheckThe")}
             </p>
           </>
         )}
         {state.error && (
-          <p role="alert" className="form-error">
-            {state.error}
+          <p
+            role="alert"
+            className="rounded-xl bg-danger-soft p-3 text-sm leading-6 text-danger"
+          >
+            {localizeServerMessage(state.error, locale)}
           </p>
         )}
         <SubmitButton
-          label={expense ? "Lưu thay đổi" : "Tạo expense"}
-          pendingLabel="Đang lưu…"
+          label={expense ? t("saveChanges") : t("createExpense")}
+          pendingLabel={t("saving")}
           disabled={Boolean(mediaBusy || amountError || customError)}
+          className="self-start"
         />
       </form>
     </section>

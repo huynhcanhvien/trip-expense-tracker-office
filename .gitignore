@@ -78,3 +78,6 @@ Icon?
 # Claude Code machine-local settings
 .claude/settings.local.json
 .claude/launch.json
+
+# Reproducible Lighthouse reports and screenshots
+/artifacts/ui-audit/
