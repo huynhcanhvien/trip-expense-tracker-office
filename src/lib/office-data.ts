@@ -73,6 +73,7 @@ export const inboxCounts = cache(async (): Promise<InboxCounts> => {
   return {
     unread: Number(counts?.unread) || 0,
     toPay: Number(counts?.toPay) || 0,
+    toConfirm: Number(counts?.toConfirm) || 0,
     approvals: Number(counts?.approvals) || 0,
   };
 });

@@ -37,7 +37,7 @@
     "unread": "{count} chưa đọc",
     "addExpense": "Khoản chi",
     "groupActions": "Thao tác trong nhóm",
-    "actionsNeeded": "{toPay} khoản cần trả, {approvals} khoản cần duyệt"
+    "actionsNeeded": "{toPay} khoản cần trả, {toConfirm} khoản cần xác nhận, {approvals} khoản cần duyệt"
   },
   "shell": {
     "brand": "Chia tiền",
@@ -261,16 +261,20 @@
     "filters": {
       "all": "Tất cả",
       "toPay": "Cần trả",
+      "toConfirm": "Cần xác nhận",
       "approvals": "Cần duyệt"
     },
     "filterSummary": {
       "toPay": "Các khoản bạn còn nợ. Mở từng khoản để trả bằng mã QR.",
-      "approvals": "Khoản chi người khác ghi với bạn là người trả tiền."
+      "approvals": "Khoản chi người khác ghi với bạn là người trả tiền.",
+      "toConfirm": "Các khoản thành viên đã báo chuyển cho khoản chi bạn trả. Kiểm tra tài khoản rồi xác nhận hoặc từ chối."
     },
     "nothingToPay": "Bạn đã trả hết. Không còn khoản nào cần trả.",
     "nothingToApprove": "Không có khoản chi nào chờ bạn duyệt.",
     "payTo": "Trả cho {name}",
-    "addedBy": "Do {name} tạo"
+    "addedBy": "Do {name} tạo",
+    "nothingToConfirm": "Không có khoản chuyển nào chờ bạn xác nhận.",
+    "reportedBy": "{name} báo đã chuyển"
   },
   "profile": {
     "yourProfile": "Hồ sơ của bạn",

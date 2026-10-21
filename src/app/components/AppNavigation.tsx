@@ -19,7 +19,7 @@ export default function AppNavigation({
   mobile?: boolean;
 }) {
   const count = counts.unread;
-  const actions = counts.toPay + counts.approvals;
+  const actions = counts.toPay + counts.toConfirm + counts.approvals;
   const pathname = usePathname();
   const t = useTranslations("nav");
   return (
@@ -70,10 +70,12 @@ export default function AppNavigation({
               <span
                 aria-label={t("actionsNeeded", {
                   toPay: counts.toPay,
+                  toConfirm: counts.toConfirm,
                   approvals: counts.approvals,
                 })}
                 title={t("actionsNeeded", {
                   toPay: counts.toPay,
+                  toConfirm: counts.toConfirm,
                   approvals: counts.approvals,
                 })}
                 className={cn(

@@ -37,7 +37,7 @@
     "unread": "{count} unread",
     "addExpense": "Expense",
     "groupActions": "Group actions",
-    "actionsNeeded": "{toPay} to pay, {approvals} to approve"
+    "actionsNeeded": "{toPay} to pay, {toConfirm} to confirm, {approvals} to approve"
   },
   "shell": {
     "brand": "Office Split",
@@ -261,16 +261,20 @@
     "filters": {
       "all": "All",
       "toPay": "To pay",
+      "toConfirm": "To confirm",
       "approvals": "Needs approval"
     },
     "filterSummary": {
       "toPay": "Shares you still owe. Open one to pay with its QR code.",
-      "approvals": "Expenses others recorded with you as the payer."
+      "approvals": "Expenses others recorded with you as the payer.",
+      "toConfirm": "Transfers members reported for expenses you paid. Check your bank, then confirm or reject."
     },
     "nothingToPay": "You're all settled. Nothing to pay.",
     "nothingToApprove": "No expenses are waiting for your approval.",
     "payTo": "Pay {name}",
-    "addedBy": "Added by {name}"
+    "addedBy": "Added by {name}",
+    "nothingToConfirm": "No transfers are waiting for your confirmation.",
+    "reportedBy": "Reported by {name}"
   },
   "profile": {
     "yourProfile": "Your profile",

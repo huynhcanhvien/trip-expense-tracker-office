@@ -8,10 +8,11 @@ import { officeContext, checked } from "@/lib/office-data";
 import { readNotification } from "@/lib/office-actions";
 import {
   approvalsData,
+  confirmationsData,
   payablesData,
   type InboxItem,
 } from "@/lib/office-inbox";
-const FILTERS = ["all", "toPay", "approvals"] as const;
+const FILTERS = ["all", "toPay", "toConfirm", "approvals"] as const;
 type Filter = (typeof FILTERS)[number];
 export default async function NotificationsPage({
   searchParams,
@@ -26,13 +27,15 @@ export default async function NotificationsPage({
     ? (requested as Filter)
     : "all";
   const { supabase } = await officeContext("/notifications");
-  const [payables, approvals] = await Promise.all([
+  const [payables, confirmations, approvals] = await Promise.all([
     payablesData(),
+    confirmationsData(),
     approvalsData(),
   ]);
   const counts: Record<Filter, number | null> = {
     all: null,
     toPay: payables.length,
+    toConfirm: confirmations.length,
     approvals: approvals.length,
   };
   const tabs = (
@@ -63,7 +66,7 @@ export default async function NotificationsPage({
       ) : (
         <ul className="mt-3">
           {items.map((item) => (
-            <li key={item.expenseId} className="border-b last:border-0">
+            <li key={item.key} className="border-b last:border-0">
               <Link
                 href={`/expenses/${item.expenseId}`}
                 className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl px-2 py-4 transition-colors hover:bg-muted"
@@ -102,7 +105,9 @@ export default async function NotificationsPage({
         {tabs}
         {filter === "toPay"
           ? inbox(payables, t("nothingToPay"), "payTo")
-          : inbox(approvals, t("nothingToApprove"), "addedBy")}
+          : filter === "toConfirm"
+            ? inbox(confirmations, t("nothingToConfirm"), "reportedBy")
+            : inbox(approvals, t("nothingToApprove"), "addedBy")}
       </AppShell>
     );
   const rows = checked(
