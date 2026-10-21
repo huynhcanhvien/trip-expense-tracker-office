@@ -6,16 +6,26 @@ import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
 import CopyButton from "@/app/components/CopyButton";
 import SavedImage from "@/app/components/SavedImage";
+import PaymentQr from "@/app/components/PaymentQr";
+import ExpenseApproval from "@/app/components/ExpenseApproval";
+import ExpenseChangeLog from "@/app/components/ExpenseChangeLog";
 import { Heading, Badge, Empty, money } from "@/app/components/OfficeUI";
 import { expenseData, checked, collectRows } from "@/lib/office-data";
-import { paymentAction, cancelExpense } from "@/lib/office-actions";
+import {
+  paymentAction,
+  cancelExpense,
+  remindPayment,
+} from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
+import { shareVietQr } from "@/lib/vietqr";
+import { canRemind } from "@/lib/push";
 export default async function ExpensePage({
   params,
 }: {
   params: Promise<{ expenseId: string }>;
 }) {
   const t = await getTranslations("expense");
+  const categories = await getTranslations("categories");
   const format = await getFormatter();
   const eventLabels: Record<string, string> = {
     report: t("transferReported"),
@@ -31,11 +41,13 @@ export default async function ExpensePage({
   if (!data) notFound();
   const { user, supabase, expense, group, shares, names } = data;
   const creator = expense.creator_id === user.id;
+  const isPayer = expense.payer_id === user.id;
+  const nameOf = (id: string) => names.get(id)?.name || t("member");
   const [bankResult, events] = await Promise.all([
     supabase
       .from("bank_profiles")
       .select("*")
-      .eq("user_id", expense.creator_id)
+      .eq("user_id", expense.payer_id)
       .maybeSingle(),
     collectRows<{
       id: string;
@@ -59,6 +71,21 @@ export default async function ExpensePage({
   );
   const confirmed = required.filter((s) => s.payment_status === "confirmed");
   const received = confirmed.reduce((sum, s) => sum.plus(s.amount), new Big(0));
+  const reference = bank?.transfer_template || expense.description;
+  const unpaid = required.filter((s) => s.payment_status !== "confirmed");
+  const qrFor = (amount: string) =>
+    bank && expense.status === "active"
+      ? shareVietQr({
+          currency: group.currency,
+          bin: bank.bank_bin,
+          accountNumber: bank.account_number,
+          amount,
+          // The sender's name already shows on the bank transfer; keep the memo for the reference.
+          memo: reference,
+        })
+      : null;
+  const myShare = unpaid.find((s) => s.user_id === user.id);
+  const myQr = myShare && qrFor(myShare.amount);
   return (
     <AppShell>
       <Link
@@ -72,17 +99,33 @@ export default async function ExpensePage({
           date: format.dateTime(new Date(`${expense.expense_date}T00:00:00Z`), {
             dateStyle: "medium",
           }),
-          name: names.get(expense.creator_id)?.name || t("member"),
+          name: nameOf(expense.payer_id),
         })}
+        description={
+          expense.creator_id !== expense.payer_id
+            ? t("addedBy", { name: nameOf(expense.creator_id) })
+            : undefined
+        }
         title={expense.description}
       >
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <strong className="text-3xl font-bold tabular-nums">
             {money(expense.amount, group.currency)}
           </strong>
-          <Badge status={expense.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-soft-foreground">
+              {categories(expense.category)}
+            </span>
+            <Badge status={expense.status} />
+          </div>
         </div>
       </Heading>
+      <ExpenseApproval
+        expense={expense}
+        isPayer={isPayer}
+        payerName={nameOf(expense.payer_id)}
+        creatorName={nameOf(expense.creator_id)}
+      />
       {expense.status === "cancelled" && (
         <div className="my-5 rounded-xl border border-warning/20 bg-warning-soft p-4 text-sm leading-7 text-warning">
           {t("cancelledNotice", {
@@ -168,7 +211,27 @@ export default async function ExpensePage({
                           />
                         </ActionForm>
                       )}
-                    {creator &&
+                    {isPayer &&
+                      s.payment_status === "pending" &&
+                      canRemind(s.last_reminded_at) && (
+                        <ActionForm
+                          action={remindPayment}
+                          label={t("remindName", { name: nameOf(s.user_id) })}
+                          className="flex max-w-full flex-wrap items-center gap-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="expenseId"
+                            value={expense.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="userId"
+                            value={s.user_id}
+                          />
+                        </ActionForm>
+                      )}
+                    {isPayer &&
                       s.payment_status === "reported" &&
                       ["confirm", "reject"].map((operation) => (
                         <ActionForm
@@ -236,8 +299,16 @@ export default async function ExpensePage({
               <Empty>{t("noRepaymentActivityYet")}</Empty>
             )}
           </section>
+          <ExpenseChangeLog
+            expenseId={expense.id}
+            currency={group.currency}
+            names={names}
+          />
         </div>
-        <aside className="min-w-0 lg:sticky lg:top-24">
+        <aside
+          aria-label={t("transferToThePersonWhoPaid")}
+          className="min-w-0 lg:sticky lg:top-24"
+        >
           <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
             <h2>{t("transferToThePersonWhoPaid")}</h2>
             {bank ? (
@@ -266,13 +337,69 @@ export default async function ExpensePage({
                     {t("transferReference")}
                   </dt>
                   <dd className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere">
-                    {bank.transfer_template || expense.description}{" "}
-                    <CopyButton
-                      value={bank.transfer_template || expense.description}
-                    />
+                    {reference} <CopyButton value={reference} />
                   </dd>
                 </dl>
-                {bank.qr_upload_id && (
+                {myShare && myQr && (
+                  <figure className="mt-5 space-y-2 text-center">
+                    <PaymentQr
+                      payload={myQr}
+                      label={t("yourPaymentQr", {
+                        amount: money(myShare.amount, group.currency),
+                      })}
+                    />
+                    <figcaption className="text-sm font-semibold">
+                      {t("scanToPay", {
+                        amount: money(myShare.amount, group.currency),
+                      })}
+                    </figcaption>
+                  </figure>
+                )}
+                {isPayer &&
+                  unpaid.length > 0 &&
+                  expense.status === "active" && (
+                    <details className="mt-5">
+                      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-primary">
+                        {t("memberQrCodes")}
+                      </summary>
+                      {bank.bank_bin ? (
+                        <ul className="mt-3 space-y-5">
+                          {unpaid.map((s) => {
+                            const payload = qrFor(s.amount);
+                            return (
+                              <li
+                                key={s.user_id}
+                                className="space-y-2 text-center"
+                              >
+                                <p className="text-sm font-semibold">
+                                  {nameOf(s.user_id)} ·{" "}
+                                  {money(s.amount, group.currency)}
+                                </p>
+                                {payload ? (
+                                  <PaymentQr
+                                    payload={payload}
+                                    size={176}
+                                    label={t("memberPaymentQr", {
+                                      name: nameOf(s.user_id),
+                                    })}
+                                  />
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("qrUnavailable")}
+                                  </p>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                          {t("addBankForQr")}
+                        </p>
+                      )}
+                    </details>
+                  )}
+                {!myQr && bank.qr_upload_id && (
                   <SavedImage
                     className="mx-auto mt-5 max-h-72 rounded-xl"
                     uploadId={bank.qr_upload_id}
@@ -282,7 +409,9 @@ export default async function ExpensePage({
               </>
             ) : (
               <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                {t("thePersonWhoPaidHasNot")}
+                {expense.status === "awaiting_payer"
+                  ? t("bankAfterApproval")
+                  : t("thePersonWhoPaidHasNot")}
               </p>
             )}
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -299,7 +428,7 @@ export default async function ExpensePage({
               />
             </section>
           )}
-          {creator && expense.status !== "cancelled" && (
+          {(creator || isPayer) && expense.status !== "cancelled" && (
             <details className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
               <summary className="flex min-h-11 items-center font-semibold text-danger">
                 {t("cancelExpense")}

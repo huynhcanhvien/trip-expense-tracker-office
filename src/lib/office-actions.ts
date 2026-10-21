@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { deliverPendingPushes } from "@/lib/push";
 import { requireUser } from "@/lib/supabase/server";
 import type { OfficeState } from "./office-types";
 const text = (f: FormData, key: string) => String(f.get(key) || "").trim();
@@ -34,7 +36,34 @@ const errorMessage = (error: { message: string }) => {
     "Shares must sum to expense amount":
       "Tổng số tiền từng người phải bằng tổng expense.",
     "Expense creator required":
-      "Chỉ người ứng tiền được sửa expense hoặc xác nhận thanh toán.",
+      "Chỉ người tạo expense được sửa hoặc hủy expense này.",
+    "Expense payer required":
+      "Chỉ người đã trả tiền được duyệt expense hoặc xác nhận thanh toán.",
+    "Payer is not approved": "Người trả tiền phải là thành viên của nhóm.",
+    "Expense is not awaiting approval": "Expense này không còn chờ duyệt.",
+    "Expense is not approved":
+      "Expense chưa được người trả tiền duyệt nên chưa thể thanh toán.",
+    "Rejection reason required": "Hãy nhập lý do từ chối.",
+    "Expense changed since you opened it":
+      "Expense vừa được sửa. Hãy tải lại trang và kiểm tra trước khi duyệt.",
+    "Active expense creator required":
+      "Không thể sửa expense này. Expense đã được người trả duyệt nên chỉ người trả được sửa.",
+    "Pending expense approvals":
+      "Còn expense đang chờ duyệt liên quan đến bạn; hãy xử lý trước khi rời nhóm.",
+    "Invalid bank BIN": "Mã ngân hàng không hợp lệ.",
+    "Invalid category": "Danh mục không hợp lệ.",
+    "Invalid share weight":
+      "Số phần của mỗi người phải là số nguyên từ 1 đến 100.",
+    "Reminder sent recently": "Bạn vừa nhắc khoản này. Hãy thử lại sau.",
+    "No payable share": "Khoản này không còn cần trả.",
+    "Invalid cadence": "Chu kỳ không hợp lệ.",
+    "Start date must not be in the past": "Ngày bắt đầu không được ở quá khứ.",
+    "Description required": "Hãy nhập mô tả.",
+    "Recurring expense creator required":
+      "Chỉ người tạo hoặc quản trị viên nhóm được dừng khoản định kỳ.",
+    "Too many devices": "Bạn đã bật thông báo trên quá nhiều thiết bị.",
+    "Too many recurring expenses":
+      "Nhóm đã có quá nhiều khoản định kỳ đang chạy. Hãy dừng bớt trước khi thêm.",
     "Expense shares are locked":
       "Đã có người báo chuyển hoặc expense đã hủy; không thể sửa phần chia.",
     "Invalid QR upload":
@@ -52,6 +81,8 @@ const errorMessage = (error: { message: string }) => {
 async function rpc(name: string, args: Record<string, unknown>) {
   const { supabase } = await requireUser();
   const result = await supabase.rpc(name, args);
+  // Push delivery runs after the response is sent, so actions stay fast.
+  if (!result.error) after(() => deliverPendingPushes().catch(() => undefined));
   return {
     data: result.data,
     error: result.error ? errorMessage(result.error) : null,
@@ -160,6 +191,8 @@ export async function saveExpense(
     p_split_mode: text(f, "splitMode"),
     p_shares: shares,
     p_receipt_upload_id: text(f, "receiptUploadId") || null,
+    p_payer_id: text(f, "payerId") || null,
+    p_category: text(f, "category") || "other",
   });
   if (error) return { error };
   revalidatePath(`/groups/${text(f, "groupId")}`);
@@ -198,6 +231,27 @@ export async function paymentAction(
   revalidatePath("/notifications");
   return { success: "Đã cập nhật trạng thái thanh toán." };
 }
+export async function approveExpense(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const id = text(f, "expenseId");
+  const approve = text(f, "decision") === "approve";
+  const { error } = await rpc("approve_expense", {
+    p_expense_id: id,
+    p_approve: approve,
+    p_reason: approve ? null : text(f, "reason"),
+    p_revision: Number(text(f, "revision")),
+  });
+  if (error) return { error };
+  revalidatePath(`/expenses/${id}`);
+  revalidatePath(`/groups/${text(f, "groupId")}`);
+  revalidatePath("/statistics");
+  revalidatePath("/notifications");
+  return {
+    success: approve ? "Đã duyệt expense." : "Đã từ chối expense.",
+  };
+}
 export async function cancelExpense(
   _: OfficeState,
   f: FormData,
@@ -223,6 +277,7 @@ export async function saveBank(
     p_account_holder: text(f, "accountHolder"),
     p_transfer_template: text(f, "transferTemplate"),
     p_qr_upload_id: text(f, "qrUploadId") || null,
+    p_bank_bin: text(f, "bankBin") || null,
   });
   if (error) return { error };
   revalidatePath("/profile");
@@ -254,4 +309,74 @@ export async function readNotification(
   if (error) return { error: "Không thể đánh dấu đã đọc." };
   revalidatePath("/notifications");
   return { success: "Đã đánh dấu đã đọc." };
+}
+export async function remindPayment(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const id = text(f, "expenseId");
+  const { error } = await rpc("remind_payment", {
+    p_expense_id: id,
+    p_user_id: text(f, "userId"),
+  });
+  if (error) return { error };
+  revalidatePath(`/expenses/${id}`);
+  return { success: "Đã gửi lời nhắc." };
+}
+export async function saveRecurring(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  let shares: unknown;
+  try {
+    shares = JSON.parse(text(f, "shares"));
+  } catch {
+    return { error: "Hãy chọn người chia tiền." };
+  }
+  const groupId = text(f, "groupId");
+  const { error } = await rpc("save_recurring", {
+    p_group_id: groupId,
+    p_description: text(f, "description"),
+    p_amount: text(f, "amount"),
+    p_category: text(f, "category") || "other",
+    p_split_mode: text(f, "splitMode"),
+    p_shares: shares,
+    p_cadence: text(f, "cadence"),
+    p_start_date: text(f, "startDate"),
+  });
+  if (error) return { error };
+  revalidatePath(`/groups/${groupId}/recurring`);
+  return { success: "Đã lưu khoản chi định kỳ." };
+}
+export async function stopRecurring(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const { error } = await rpc("stop_recurring", { p_id: text(f, "id") });
+  if (error) return { error };
+  revalidatePath(`/groups/${text(f, "groupId")}/recurring`);
+  return { success: "Đã dừng khoản chi định kỳ." };
+}
+/** Called from the browser after it subscribes or unsubscribes to web push. */
+export async function setPushSubscription(input: {
+  endpoint: string;
+  p256dh?: string;
+  auth?: string;
+  locale?: string;
+  enabled: boolean;
+}): Promise<OfficeState> {
+  if (
+    typeof input?.endpoint !== "string" ||
+    !input.endpoint.startsWith("https://")
+  )
+    return { error: "Dữ liệu gửi lên không hợp lệ." };
+  const { error } = input.enabled
+    ? await rpc("save_push_subscription", {
+        p_endpoint: input.endpoint,
+        p_p256dh: String(input.p256dh || ""),
+        p_auth: String(input.auth || ""),
+        p_locale: input.locale === "en" ? "en" : "vi",
+      })
+    : await rpc("delete_push_subscription", { p_endpoint: input.endpoint });
+  return error ? { error } : { success: "ok" };
 }

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Users, ChartColumn, Bell, User, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "./ui/cn";
+import type { InboxCounts } from "@/lib/office-types";
 const items = [
   { href: "/", key: "groups", Icon: Users },
   { href: "/statistics", key: "statistics", Icon: ChartColumn },
@@ -11,12 +12,14 @@ const items = [
   { href: "/profile", key: "profile", Icon: User },
 ];
 export default function AppNavigation({
-  count,
+  counts,
   mobile = false,
 }: {
-  count: number;
+  counts: InboxCounts;
   mobile?: boolean;
 }) {
+  const count = counts.unread;
+  const actions = counts.toPay + counts.approvals;
   const pathname = usePathname();
   const t = useTranslations("nav");
   return (
@@ -63,13 +66,31 @@ export default function AppNavigation({
                 {count > 99 ? "99+" : count}
               </span>
             )}
+            {href === "/notifications" && actions > 0 && (
+              <span
+                aria-label={t("actionsNeeded", {
+                  toPay: counts.toPay,
+                  approvals: counts.approvals,
+                })}
+                title={t("actionsNeeded", {
+                  toPay: counts.toPay,
+                  approvals: counts.approvals,
+                })}
+                className={cn(
+                  "tabular rounded-full bg-warning-soft px-1.5 text-[10px] font-bold text-warning ring-1 ring-warning/40",
+                  mobile ? "absolute left-2 top-0" : count > 0 ? "" : "ml-auto",
+                )}
+              >
+                {actions > 99 ? "99+" : actions}
+              </span>
+            )}
           </Link>
         );
       })}
     </nav>
   );
 }
-export function MobileTabBar({ count }: { count: number }) {
+export function MobileTabBar({ counts }: { counts: InboxCounts }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const groupId = pathname.match(/^\/groups\/([^/]+)$/)?.[1];
@@ -87,7 +108,7 @@ export function MobileTabBar({ count }: { count: number }) {
         </nav>
       )}
       <div className="pointer-events-auto">
-        <AppNavigation count={count} mobile />
+        <AppNavigation counts={counts} mobile />
       </div>
     </div>
   );

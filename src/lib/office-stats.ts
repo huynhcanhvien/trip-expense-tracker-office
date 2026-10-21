@@ -1,5 +1,10 @@
 import Big from "big.js";
-import type { Expense, Group, Share } from "./office-types";
+import {
+  isUnapproved,
+  type Expense,
+  type Group,
+  type Share,
+} from "./office-types";
 export type Totals = {
   spent: string;
   toCollect: string;
@@ -28,6 +33,7 @@ export type CurrencyStats = {
   people: PersonTotals[];
   months: { month: string; amount: string }[];
   days: { day: string; amount: string }[];
+  categories: { category: string; amount: string; count: number }[];
 };
 const add = (a: string, b: string) => new Big(a).plus(b).toString();
 const empty = (): Totals => ({
@@ -64,6 +70,7 @@ export function calculateStats(
       people: Map<string, PersonTotals>;
       months: Map<string, string>;
       days: Map<string, string>;
+      categories: Map<string, { amount: string; count: number }>;
     }
   >();
   for (const group of groups) {
@@ -73,11 +80,12 @@ export function calculateStats(
         people: new Map(),
         months: new Map(),
         days: new Map(),
+        categories: new Map(),
       });
   }
   for (const e of expenses) {
     const group = byGroup.get(e.group_id);
-    if (!group) continue;
+    if (!group || isUnapproved(e.status)) continue;
     const b = buckets.get(group.currency)!;
     const person = (id: string) => {
       if (!b.people.has(id))
@@ -106,11 +114,14 @@ export function calculateStats(
       e.expense_date,
       add(b.days.get(e.expense_date) || "0", e.amount),
     );
-    person(e.creator_id).advanced = add(
-      person(e.creator_id).advanced,
-      e.amount,
-    );
-    if (e.creator_id === userId)
+    const category = e.category || "other";
+    const current = b.categories.get(category) || { amount: "0", count: 0 };
+    b.categories.set(category, {
+      amount: add(current.amount, e.amount),
+      count: current.count + 1,
+    });
+    person(e.payer_id).advanced = add(person(e.payer_id).advanced, e.amount);
+    if (e.payer_id === userId)
       b.totals.advanced = add(b.totals.advanced, e.amount);
     for (const s of parts) {
       const p = person(s.user_id);
@@ -127,15 +138,15 @@ export function calculateStats(
       } else {
         b.totals.outstanding = add(b.totals.outstanding, s.amount);
         p.toPay = add(p.toPay, s.amount);
-        person(e.creator_id).toReceive = add(
-          person(e.creator_id).toReceive,
+        person(e.payer_id).toReceive = add(
+          person(e.payer_id).toReceive,
           s.amount,
         );
         if (s.payment_status === "reported")
           b.totals.reported = add(b.totals.reported, s.amount);
         if (s.user_id === userId)
           b.totals.toPay = add(b.totals.toPay, s.amount);
-        if (e.creator_id === userId)
+        if (e.payer_id === userId)
           b.totals.toReceive = add(b.totals.toReceive, s.amount);
       }
     }
@@ -150,5 +161,13 @@ export function calculateStats(
     days: [...b.days]
       .sort(([a], [z]) => a.localeCompare(z))
       .map(([day, amount]) => ({ day, amount })),
+    // Largest spending first; ties keep a stable alphabetical order.
+    categories: [...b.categories]
+      .map(([category, v]) => ({ category, ...v }))
+      .sort(
+        (x, y) =>
+          new Big(y.amount).cmp(x.amount) ||
+          x.category.localeCompare(y.category),
+      ),
   }));
 }

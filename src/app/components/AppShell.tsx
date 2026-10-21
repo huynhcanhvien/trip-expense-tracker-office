@@ -4,16 +4,16 @@ import { Wallet, Receipt, ArrowRight, LogOut } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { signOut } from "@/app/auth/actions";
 import { requireUser } from "@/lib/supabase/server";
-import { unreadNotifications } from "@/lib/office-data";
+import { inboxCounts } from "@/lib/office-data";
 import { PolicyLinks } from "./PublicPage";
 import AppNavigation, { MobileTabBar } from "./AppNavigation";
 import ThemeToggle from "./ui/theme-toggle";
 import LocaleSwitcher from "./ui/locale-switcher";
 import { buttonVariants } from "./ui/button";
 export default async function AppShell({ children }: { children: ReactNode }) {
-  const [{ user }, count, t, common] = await Promise.all([
+  const [{ user }, counts, t, common] = await Promise.all([
     requireUser(),
-    unreadNotifications(),
+    inboxCounts(),
     getTranslations("shell"),
     getTranslations("common"),
   ]);
@@ -56,7 +56,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
           <p className="mb-4 mt-10 text-[10px] font-bold tracking-widest text-muted-foreground">
             {t("yourSpace")}
           </p>
-          <AppNavigation count={count || 0} />
+          <AppNavigation counts={counts} />
           <div className="mt-8 rounded-2xl bg-accent-soft p-5 text-accent-soft-foreground">
             <Receipt className="mb-3" size={26} />
             <strong className="text-sm">{t("tipTitle")}</strong>
@@ -135,7 +135,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
           <PolicyLinks />
         </footer>
       </div>
-      <MobileTabBar count={count || 0} />
+      <MobileTabBar counts={counts} />
     </div>
   );
 }

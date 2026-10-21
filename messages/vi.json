@@ -36,7 +36,8 @@
     "profile": "Hồ sơ",
     "unread": "{count} chưa đọc",
     "addExpense": "Khoản chi",
-    "groupActions": "Thao tác trong nhóm"
+    "groupActions": "Thao tác trong nhóm",
+    "actionsNeeded": "{toPay} khoản cần trả, {approvals} khoản cần duyệt"
   },
   "shell": {
     "brand": "Chia tiền",
@@ -78,7 +79,8 @@
     "exempt": "Không cần chuyển",
     "pending": "Chưa trả",
     "approved": "Đã tham gia",
-    "rejected": "Đã từ chối"
+    "rejected": "Đã từ chối",
+    "awaiting_payer": "Chờ người trả duyệt"
   },
   "dashboard": {
     "you": "bạn",
@@ -138,11 +140,12 @@
     "leaveWarning": "Bạn chỉ có thể rời nhóm khi mọi khoản phải trả đã được người ứng tiền xác nhận, và mọi khoản người khác nợ bạn đã được bạn xác nhận đã nhận. Khoản chi đã hủy không tính; không bù trừ tiền phải trả và phải thu. Lịch sử khoản chi và thanh toán được giữ lại; bạn sẽ mất quyền xem nhóm và cần xin tham gia lại nếu muốn quay lại.",
     "confirmLeave": "Xác nhận rời nhóm",
     "leaveConfirmation": "Tôi muốn rời nhóm này",
-    "groupDetails": "Thành viên và quản lý nhóm"
+    "groupDetails": "Thành viên và quản lý nhóm",
+    "recurring": "Định kỳ"
   },
   "newExpense": {
     "createExpense": "Tạo expense",
-    "youPaidUpfrontSelectThePeople": "Bạn là người đã ứng tiền. Chọn những người cùng chia khoản chi này."
+    "youPaidUpfrontSelectThePeople": "Chọn người đã trả tiền và những người cùng chia khoản chi này."
   },
   "editExpense": {
     "expenseDetails": "← Chi tiết expense",
@@ -186,7 +189,16 @@
     "cancellationReason": "Lý do hủy",
     "payerLine": "{date} · {name} ứng tiền",
     "progress": "{confirmed}/{required} người cần chuyển đã xác nhận · Đã nhận {amount}",
-    "cancelledNotice": "Đã hủy: {reason}. Tiền đã xác nhận {amount} cần được đối soát hoặc hoàn trả bên ngoài app."
+    "cancelledNotice": "Đã hủy: {reason}. Tiền đã xác nhận {amount} cần được đối soát hoặc hoàn trả bên ngoài app.",
+    "addedBy": "Do {name} tạo",
+    "yourPaymentQr": "Mã QR thanh toán phần của bạn: {amount}",
+    "scanToPay": "Quét bằng ứng dụng ngân hàng để trả {amount}",
+    "memberQrCodes": "Hiện mã QR thanh toán của từng thành viên",
+    "memberPaymentQr": "Mã QR thanh toán của {name}",
+    "qrUnavailable": "Không tạo được QR cho số tiền này.",
+    "addBankForQr": "Chọn ngân hàng trong hồ sơ để tạo mã QR thanh toán.",
+    "bankAfterApproval": "Thông tin ngân hàng sẽ hiện khi người trả tiền duyệt khoản chi.",
+    "remindName": "Nhắc {name}"
   },
   "statistics": {
     "statistics": "Thống kê",
@@ -232,7 +244,11 @@
     "byDay": "Theo ngày",
     "dailyChartLabel": "Biểu đồ chi tiêu theo ngày ({currency})",
     "dailyData": "Xem số liệu theo ngày",
-    "day": "Ngày"
+    "day": "Ngày",
+    "byCategory": "Chi tiêu theo danh mục",
+    "expenseCount": "{count} khoản",
+    "noSpending": "Không có chi tiêu trong khoảng này.",
+    "exportCsv": "Xuất CSV"
   },
   "notifications": {
     "notifications": "Thông báo",
@@ -240,7 +256,21 @@
     "youHaveNoNotificationsYet": "Bạn chưa có thông báo.",
     "viewDetails": "Xem chi tiết →",
     "markAsRead": "Đã đọc",
-    "summary": "{count} thông báo chưa đọc trong 100 thông báo gần nhất"
+    "summary": "{count} thông báo chưa đọc trong 100 thông báo gần nhất",
+    "filterLabel": "Lọc thông báo",
+    "filters": {
+      "all": "Tất cả",
+      "toPay": "Cần trả",
+      "approvals": "Cần duyệt"
+    },
+    "filterSummary": {
+      "toPay": "Các khoản bạn còn nợ. Mở từng khoản để trả bằng mã QR.",
+      "approvals": "Khoản chi người khác ghi với bạn là người trả tiền."
+    },
+    "nothingToPay": "Bạn đã trả hết. Không còn khoản nào cần trả.",
+    "nothingToApprove": "Không có khoản chi nào chờ bạn duyệt.",
+    "payTo": "Trả cho {name}",
+    "addedBy": "Do {name} tạo"
   },
   "profile": {
     "yourProfile": "Hồ sơ của bạn",
@@ -253,7 +283,8 @@
     "preferences": "Giao diện & ngôn ngữ",
     "preferencesDescription": "Lựa chọn của bạn được lưu cho lần truy cập sau.",
     "themeChoice": "Chọn giao diện",
-    "languageChoice": "Chọn ngôn ngữ"
+    "languageChoice": "Chọn ngôn ngữ",
+    "notifications": "Thông báo"
   },
   "invite": {
     "invitationExpired": "Link mời không còn hiệu lực",
@@ -331,7 +362,14 @@
     "createExpense": "Tạo expense",
     "saving": "Đang lưu…",
     "amountPreview": "Số tiền sẽ lưu: {amount}",
-    "shareLabel": "Phần của {name}"
+    "shareLabel": "Phần của {name}",
+    "whoPaid": "Người trả tiền",
+    "me": "Tôi",
+    "needsPayerApproval": "{name} cần duyệt khoản chi trước khi thành viên được yêu cầu trả tiền.",
+    "category": "Danh mục",
+    "splitByPortions": "Chia theo phần",
+    "portions": "Số phần",
+    "portionsLabel": "Số phần của {name}"
   },
   "bank": {
     "saveBankAccount": "Lưu ngân hàng",
@@ -342,7 +380,14 @@
     "forExampleNguyenVanARepayment": "Ví dụ: Nguyen Van A thanh toan",
     "bankQRCode": "QR ngân hàng",
     "yourBankQRCode": "QR ngân hàng của bạn",
-    "removeQR": "Gỡ QR"
+    "removeQR": "Gỡ QR",
+    "vietQrReady": "Thành viên sẽ nhận mã QR thanh toán đúng số tiền.",
+    "vietQrPickBank": "Chọn ngân hàng trong danh sách để thành viên nhận mã QR thanh toán đúng số tiền.",
+    "qrNotice": {
+      "filled": "Đã điền thông tin từ mã QR. Vui lòng kiểm tra trước khi lưu.",
+      "unknownBank": "Đã điền số tài khoản từ mã QR nhưng chưa nhận ra ngân hàng. Hãy nhập tên ngân hàng.",
+      "notFound": "Không đọc được mã VietQR từ ảnh này. Hãy nhập thông tin thủ công."
+    }
   },
   "scanner": {
     "scanReceipt": "Quét hóa đơn",
@@ -422,5 +467,96 @@
     "confirm": "Xóa nhóm vĩnh viễn",
     "pending": "Đang xóa…",
     "cancel": "Giữ nhóm"
+  },
+  "approval": {
+    "title": "Bạn đã trả khoản này?",
+    "explain": "{name} đã ghi khoản chi này với bạn là người trả tiền. Hãy duyệt để thành viên trả lại cho bạn, hoặc từ chối nếu không đúng.",
+    "approve": "Duyệt, tôi đã trả",
+    "reject": "Từ chối",
+    "confirmReject": "Từ chối khoản chi",
+    "reason": "Lý do",
+    "waitingFor": "Đang chờ {name} duyệt. Phần chia chưa được tính cho đến khi duyệt.",
+    "rejectedNotice": "{name} đã từ chối khoản chi: {reason}. Hãy sửa hoặc hủy khoản chi."
+  },
+  "categories": {
+    "food": "Ăn uống",
+    "transport": "Đi lại",
+    "office": "Văn phòng phẩm",
+    "entertainment": "Giải trí",
+    "utilities": "Điện nước & hóa đơn",
+    "gift": "Quà & sự kiện",
+    "other": "Khác"
+  },
+  "changeLog": {
+    "title": "Nhật ký thay đổi",
+    "member": "Thành viên",
+    "automatic": "Tạo tự động",
+    "empty": "Chưa có thay đổi nào.",
+    "actions": {
+      "create": "Tạo khoản chi",
+      "edit": "Sửa số tiền hoặc phần chia",
+      "metadata": "Sửa thông tin",
+      "approve": "Người trả đã duyệt",
+      "reject": "Người trả đã từ chối",
+      "cancel": "Hủy khoản chi",
+      "recurring": "Tạo từ lịch định kỳ"
+    },
+    "fields": {
+      "description": "Mô tả",
+      "amount": "Số tiền",
+      "expense_date": "Ngày",
+      "payer_id": "Người trả",
+      "category": "Danh mục",
+      "reason": "Lý do",
+      "shareOf": "Phần của {name}"
+    }
+  },
+  "export": {
+    "columns": {
+      "date": "Ngày",
+      "group": "Nhóm",
+      "description": "Mô tả",
+      "category": "Danh mục",
+      "expenseStatus": "Trạng thái khoản chi",
+      "total": "Tổng tiền",
+      "currency": "Tiền tệ",
+      "paidBy": "Người trả",
+      "addedBy": "Người tạo",
+      "member": "Thành viên",
+      "share": "Phần chia",
+      "paymentStatus": "Trạng thái thanh toán"
+    }
+  },
+  "recurring": {
+    "title": "Khoản chi định kỳ",
+    "pageDescription": "Hóa đơn lặp lại hằng tuần hoặc hằng tháng sẽ được tự thêm vào mỗi sáng. Bạn là người trả, thành viên chia đều.",
+    "schedules": "Lịch đang có",
+    "empty": "Chưa có khoản chi định kỳ nào.",
+    "new": "Tạo khoản định kỳ",
+    "save": "Lưu lịch",
+    "description": "Mô tả",
+    "amount": "Số tiền ({currency})",
+    "category": "Danh mục",
+    "cadence": "Lặp lại",
+    "monthly": "Hằng tháng",
+    "weekly": "Hằng tuần",
+    "startDate": "Ngày đầu tiên",
+    "participants": "Chia cho ({selected}/{total})",
+    "member": "Thành viên",
+    "hint": "Mỗi lần lặp sẽ tạo một khoản chi do bạn trả. Thành viên đã rời nhóm sẽ được bỏ qua.",
+    "paidBy": "{name} trả",
+    "nextOn": "Lần tới: {date}",
+    "paused": "Đã tạm dừng do lỗi. Hãy tạo lịch mới.",
+    "stopped": "Đã dừng",
+    "stop": "Dừng"
+  },
+  "push": {
+    "on": "Thông báo đã bật trên thiết bị này.",
+    "off": "Nhận thông báo trên thiết bị này khi có khoản cần trả hoặc cần duyệt.",
+    "unsupported": "Trình duyệt này không hỗ trợ thông báo. Trên iPhone, hãy thêm app vào Màn hình chính trước.",
+    "blocked": "Thông báo đang bị chặn. Hãy cho phép trong cài đặt trình duyệt.",
+    "enable": "Bật thông báo",
+    "disable": "Tắt thông báo",
+    "failed": "Không đổi được cài đặt thông báo. Hãy thử lại."
   }
 }

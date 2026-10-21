@@ -7,6 +7,7 @@ import type {
   Expense,
   Share,
   JoinRequest,
+  InboxCounts,
 } from "./office-types";
 export function checked<T>(result: {
   data: T | null;
@@ -63,15 +64,21 @@ export const groupsForUser = cache(async (): Promise<Group[]> => {
   );
 });
 
-export const unreadNotifications = cache(async () => {
+/** Badge numbers for every page in one database round trip. */
+export const inboxCounts = cache(async (): Promise<InboxCounts> => {
   const { supabase } = await requireUser();
-  const result = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .is("read_at", null);
-  checked(result);
-  return result.count || 0;
+  const counts = checked(
+    await supabase.rpc("inbox_counts"),
+  ) as Partial<InboxCounts> | null;
+  return {
+    unread: Number(counts?.unread) || 0,
+    toPay: Number(counts?.toPay) || 0,
+    approvals: Number(counts?.approvals) || 0,
+  };
 });
+export const unreadNotifications = cache(
+  async () => (await inboxCounts()).unread,
+);
 
 /** Form data stays small even when a group's expense history has grown. */
 export const groupMembersData = cache(async (id: string) => {
@@ -146,7 +153,7 @@ export async function groupData(id: string) {
   const names = await profilesFor([
     ...members.map((x) => x.user_id),
     ...requests.map((x) => x.user_id),
-    ...expenses.map((x) => x.creator_id),
+    ...expenses.flatMap((x) => [x.creator_id, x.payer_id]),
   ]);
   return {
     group,
@@ -192,6 +199,7 @@ export async function expenseData(id: string) {
   const names = await profilesFor([
     ...shares.map((s) => s.user_id),
     expense.creator_id,
+    expense.payer_id,
   ]);
   return { user, supabase, expense, group, shares, names };
 }

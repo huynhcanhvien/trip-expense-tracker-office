@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import AppShell from "@/app/components/AppShell";
 import ActionForm from "@/app/components/ActionForm";
 import BankEditor from "@/app/components/BankEditor";
+import PushToggle from "@/app/components/PushToggle";
 import { Heading } from "@/app/components/OfficeUI";
 import { officeContext, checked } from "@/lib/office-data";
 import { saveProfile } from "@/lib/office-actions";
@@ -60,6 +61,12 @@ export default async function ProfilePage() {
           </p>
           <BankEditor bank={checked(bank) as BankAccount | null} />
         </section>
+        {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+          <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
+            <h2>{t("notifications")}</h2>
+            <PushToggle />
+          </section>
+        )}
       </div>
     </AppShell>
   );

@@ -7,7 +7,7 @@ export function StatusBadge({ status }: { status: string }) {
     ? "bg-success-soft text-success"
     : ["cancelled", "rejected"].includes(status)
       ? "bg-danger-soft text-danger"
-      : ["reported", "active", "collecting"].includes(status)
+      : ["reported", "active", "collecting", "awaiting_payer"].includes(status)
         ? "bg-warning-soft text-warning"
         : "bg-muted text-muted-foreground";
   return (

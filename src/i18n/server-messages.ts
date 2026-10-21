@@ -8,6 +8,12 @@ const english: Record<string, string> = {
   "Thành viên đã báo chuyển tiền": "A member reported a transfer",
   "Khoản chuyển tiền đã được xác nhận": "A transfer was confirmed",
   "Khoản chuyển tiền chưa được xác nhận": "A transfer has not been confirmed",
+  "Có khoản chi cần bạn xác nhận": "An expense paid by you needs your approval",
+  "Người trả tiền đã xác nhận khoản chi": "The payer approved your expense",
+  "Người trả tiền đã từ chối khoản chi": "The payer rejected your expense",
+  "Nhắc: bạn còn khoản cần trả": "Reminder: you still have a share to pay",
+  "Khoản chi định kỳ đã tạm dừng do lỗi":
+    "A recurring expense was paused because it could not be created",
   "Khoản chi đã bị hủy; kiểm tra đối soát":
     "An expense was cancelled; review reconciliation",
   "Vui lòng đăng nhập để tiếp tục.": "Please sign in to continue.",
@@ -43,8 +49,44 @@ const english: Record<string, string> = {
     "A share has more decimal places than this currency supports.",
   "Tổng số tiền từng người phải bằng tổng expense.":
     "The shares must add up to the total expense.",
-  "Chỉ người ứng tiền được sửa expense hoặc xác nhận thanh toán.":
-    "Only the person who paid can edit this expense or confirm repayments.",
+  "Chỉ người tạo expense được sửa hoặc hủy expense này.":
+    "Only the person who added this expense can edit or cancel it.",
+  "Chỉ người đã trả tiền được duyệt expense hoặc xác nhận thanh toán.":
+    "Only the person who paid can approve this expense or confirm repayments.",
+  "Người trả tiền phải là thành viên của nhóm.":
+    "The payer must be a member of the group.",
+  "Expense này không còn chờ duyệt.":
+    "This expense is no longer awaiting approval.",
+  "Expense chưa được người trả tiền duyệt nên chưa thể thanh toán.":
+    "The payer has not approved this expense yet, so it cannot be paid.",
+  "Hãy nhập lý do từ chối.": "Enter a reason for rejecting.",
+  "Expense vừa được sửa. Hãy tải lại trang và kiểm tra trước khi duyệt.":
+    "This expense was just edited. Reload the page and review it before deciding.",
+  "Không thể sửa expense này. Expense đã được người trả duyệt nên chỉ người trả được sửa.":
+    "You can't edit this expense. The payer has approved it, so only they can change it.",
+  "Còn expense đang chờ duyệt liên quan đến bạn; hãy xử lý trước khi rời nhóm.":
+    "Some expenses involving you are still awaiting approval; resolve them before leaving.",
+  "Mã ngân hàng không hợp lệ.": "Invalid bank code.",
+  "Danh mục không hợp lệ.": "Invalid category.",
+  "Số phần của mỗi người phải là số nguyên từ 1 đến 100.":
+    "Each person's portion must be a whole number from 1 to 100.",
+  "Bạn vừa nhắc khoản này. Hãy thử lại sau.":
+    "You reminded this recently. Try again later.",
+  "Khoản này không còn cần trả.": "This share no longer needs paying.",
+  "Chu kỳ không hợp lệ.": "Invalid schedule.",
+  "Ngày bắt đầu không được ở quá khứ.": "The start date can't be in the past.",
+  "Hãy nhập mô tả.": "Enter a description.",
+  "Chỉ người tạo hoặc quản trị viên nhóm được dừng khoản định kỳ.":
+    "Only its creator or the group administrator can stop a recurring expense.",
+  "Bạn đã bật thông báo trên quá nhiều thiết bị.":
+    "Notifications are already on for too many devices.",
+  "Đã gửi lời nhắc.": "Reminder sent.",
+  "Nhóm đã có quá nhiều khoản định kỳ đang chạy. Hãy dừng bớt trước khi thêm.":
+    "This group has too many active recurring expenses. Stop some before adding more.",
+  "Đã lưu khoản chi định kỳ.": "Recurring expense saved.",
+  "Đã dừng khoản chi định kỳ.": "Recurring expense stopped.",
+  "Đã duyệt expense.": "Expense approved.",
+  "Đã từ chối expense.": "Expense rejected.",
   "Đã có người báo chuyển hoặc expense đã hủy; không thể sửa phần chia.":
     "The shares cannot be edited after a transfer is reported or the expense is cancelled.",
   "Ảnh QR không hợp lệ hoặc chưa tải xong. Hãy chọn lại ảnh.":

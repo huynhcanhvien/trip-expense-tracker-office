@@ -1,0 +1,14 @@
+import type { MetadataRoute } from "next";
+
+/** Lets phones install the app, which iOS requires before allowing web push. */
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Office Split",
+    short_name: "Office Split",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#faf7f2",
+    theme_color: "#faf7f2",
+    icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
+  };
+}
