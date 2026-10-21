@@ -4,7 +4,14 @@ import { useLocale } from "next-intl";
 import { localizeServerMessage } from "@/i18n/server-messages";
 import { useActionState, useId, useState } from "react";
 import Big from "big.js";
-import type { Expense, Member, OfficeState, Share } from "@/lib/office-types";
+import {
+  CATEGORIES,
+  type Expense,
+  type Member,
+  type OfficeState,
+  type Share,
+} from "@/lib/office-types";
+import { weightedShares } from "@/lib/split";
 import { saveExpense } from "@/lib/office-actions";
 import { decimalPlaces, formatAmount, type CurrencyCode } from "@/lib/currency";
 import { moneyInputError, moneyInputPattern } from "@/lib/money-input";
@@ -27,6 +34,7 @@ export default function ExpenseEditor({
   shares?: Share[];
 }) {
   const t = useTranslations("editor");
+  const categories = useTranslations("categories");
   const locale = useLocale();
   const [state, action] = useActionState<OfficeState, FormData>(
     saveExpense,
@@ -47,7 +55,17 @@ export default function ExpenseEditor({
   const [selected, setSelected] = useState<string[]>(
     expense ? shares.map((s) => s.user_id) : members.map((m) => m.user_id),
   );
-  const [mode, setMode] = useState(expense ? "custom" : "even");
+  const [mode, setMode] = useState(
+    !expense ? "even" : shares.some((s) => s.weight) ? "weight" : "custom",
+  );
+  const [weights, setWeights] = useState<Record<string, string>>(
+    Object.fromEntries(shares.map((s) => [s.user_id, String(s.weight || 1)])),
+  );
+  const weightOf = (id: string) => {
+    const value = Number(weights[id] || 1);
+    return Number.isInteger(value) && value >= 1 && value <= 100 ? value : 0;
+  };
+  const [category, setCategory] = useState(expense?.category || "other");
   const [custom, setCustom] = useState<Record<string, string>>(
     Object.fromEntries(shares.map((s) => [s.user_id, s.amount])),
   );
@@ -69,7 +87,17 @@ export default function ExpenseEditor({
       ? selected
           .map((id) => moneyInputError(custom[id] || "", dp, true))
           .find(Boolean)
-      : undefined;
+      : mode === "weight" && selected.some((id) => !weightOf(id))
+        ? "Số phần của mỗi người phải là số nguyên từ 1 đến 100."
+        : undefined;
+  const weightPreview =
+    mode === "weight" && !amountError && !customError
+      ? weightedShares(
+          amount,
+          Object.fromEntries(selected.map((id) => [id, weightOf(id)])),
+          dp,
+        )
+      : {};
   let remaining = "";
   try {
     remaining = new Big(amount || 0)
@@ -115,14 +143,19 @@ export default function ExpenseEditor({
         <input type="hidden" name="expenseId" value={expense?.id || ""} />
         <input type="hidden" name="receiptUploadId" value={upload} />
         <input type="hidden" name="payerId" value={payer} />
+        <input type="hidden" name="category" value={category} />
         <input
           type="hidden"
           name="shares"
           value={JSON.stringify(
-            selected.map((userId) => ({
-              userId,
-              amount: mode === "custom" ? custom[userId] || "0" : "0",
-            })),
+            selected.map((userId) =>
+              mode === "weight"
+                ? { userId, weight: weightOf(userId) }
+                : {
+                    userId,
+                    amount: mode === "custom" ? custom[userId] || "0" : "0",
+                  },
+            ),
           )}
         />
         <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
@@ -135,6 +168,20 @@ export default function ExpenseEditor({
             maxLength={300}
             placeholder={t("forExampleFridayLunch")}
           />
+        </label>
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("category")}
+          <select
+            aria-label={t("category")}
+            value={category}
+            onChange={(e) => setCategory(e.target.value as typeof category)}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {categories(c)}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="flex flex-col gap-5 sm:flex-row">
           <label className="flex min-w-0 flex-col gap-2 text-sm font-medium flex-1">
@@ -224,6 +271,7 @@ export default function ExpenseEditor({
           >
             <option value="even">{t("splitEqually")}</option>
             <option value="custom">{t("enterIndividualAmounts")}</option>
+            <option value="weight">{t("splitByPortions")}</option>
           </select>
         </label>
         <fieldset className="flex flex-col gap-4 rounded-xl border p-4">
@@ -264,6 +312,36 @@ export default function ExpenseEditor({
                 />
                 {m.profile?.name || t("member")}
               </label>
+              {mode === "weight" && selected.includes(m.user_id) && (
+                <div className="flex items-center gap-3">
+                  <label className="flex w-24 min-w-0 flex-col gap-2 text-sm font-medium">
+                    {t("portions")}
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      step={1}
+                      inputMode="numeric"
+                      aria-label={t("portionsLabel", {
+                        name: m.profile?.name || t("member"),
+                      })}
+                      value={weights[m.user_id] ?? "1"}
+                      onChange={(e) =>
+                        setWeights({ ...weights, [m.user_id]: e.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                  <output className="min-w-24 text-right text-sm tabular-nums text-muted-foreground">
+                    {weightPreview[m.user_id]
+                      ? formatAmount(
+                          new Big(weightPreview[m.user_id]),
+                          currency as CurrencyCode,
+                        )
+                      : "—"}
+                  </output>
+                </div>
+              )}
               {mode === "custom" && selected.includes(m.user_id) && (
                 <label className="flex min-w-0 flex-col gap-2 text-sm font-medium w-36">
                   {t("amount")}

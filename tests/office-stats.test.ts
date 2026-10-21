@@ -161,4 +161,24 @@ describe("office statistics", () => {
     expect(b?.advanced).toBe("100");
     expect(b?.toReceive).toBe("60");
   });
+  it("totals approved spending per category, largest first", () => {
+    const [s] = calculateStats(
+      [group("g", "VND")],
+      [
+        { ...expense("a", "g", "active", "100"), category: "food" },
+        { ...expense("b", "g", "completed", "300"), category: "transport" },
+        { ...expense("c", "g", "active", "50"), category: "food" },
+        { ...expense("d", "g", "cancelled", "999"), category: "gift" },
+        { ...expense("w", "g", "awaiting_payer", "999"), category: "gift" },
+        expense("x", "g", "active", "150"),
+      ],
+      [],
+      "a",
+    );
+    expect(s.categories).toEqual([
+      { category: "transport", amount: "300", count: 1 },
+      { category: "food", amount: "150", count: 2 },
+      { category: "other", amount: "150", count: 1 },
+    ]);
+  });
 });

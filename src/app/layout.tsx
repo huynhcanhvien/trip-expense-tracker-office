@@ -56,6 +56,9 @@ export default async function RootLayout({
       "locale",
       "theme",
       "status",
+      "categories",
+      "recurring",
+      "push",
     ].map((key) => [key, messages[key]]),
   );
   return (

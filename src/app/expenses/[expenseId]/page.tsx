@@ -8,9 +8,14 @@ import CopyButton from "@/app/components/CopyButton";
 import SavedImage from "@/app/components/SavedImage";
 import PaymentQr from "@/app/components/PaymentQr";
 import ExpenseApproval from "@/app/components/ExpenseApproval";
+import ExpenseChangeLog from "@/app/components/ExpenseChangeLog";
 import { Heading, Badge, Empty, money } from "@/app/components/OfficeUI";
 import { expenseData, checked, collectRows } from "@/lib/office-data";
-import { paymentAction, cancelExpense } from "@/lib/office-actions";
+import {
+  paymentAction,
+  cancelExpense,
+  remindPayment,
+} from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
 import { shareVietQr } from "@/lib/vietqr";
 export default async function ExpensePage({
@@ -19,6 +24,7 @@ export default async function ExpensePage({
   params: Promise<{ expenseId: string }>;
 }) {
   const t = await getTranslations("expense");
+  const categories = await getTranslations("categories");
   const format = await getFormatter();
   const eventLabels: Record<string, string> = {
     report: t("transferReported"),
@@ -105,7 +111,12 @@ export default async function ExpensePage({
           <strong className="text-3xl font-bold tabular-nums">
             {money(expense.amount, group.currency)}
           </strong>
-          <Badge status={expense.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-soft-foreground">
+              {categories(expense.category)}
+            </span>
+            <Badge status={expense.status} />
+          </div>
         </div>
       </Heading>
       <ExpenseApproval
@@ -199,6 +210,20 @@ export default async function ExpensePage({
                           />
                         </ActionForm>
                       )}
+                    {isPayer && s.payment_status === "pending" && (
+                      <ActionForm
+                        action={remindPayment}
+                        label={t("remindName", { name: nameOf(s.user_id) })}
+                        className="flex max-w-full flex-wrap items-center gap-2"
+                      >
+                        <input
+                          type="hidden"
+                          name="expenseId"
+                          value={expense.id}
+                        />
+                        <input type="hidden" name="userId" value={s.user_id} />
+                      </ActionForm>
+                    )}
                     {isPayer &&
                       s.payment_status === "reported" &&
                       ["confirm", "reject"].map((operation) => (
@@ -267,8 +292,16 @@ export default async function ExpensePage({
               <Empty>{t("noRepaymentActivityYet")}</Empty>
             )}
           </section>
+          <ExpenseChangeLog
+            expenseId={expense.id}
+            currency={group.currency}
+            names={names}
+          />
         </div>
-        <aside className="min-w-0 lg:sticky lg:top-24">
+        <aside
+          aria-label={t("transferToThePersonWhoPaid")}
+          className="min-w-0 lg:sticky lg:top-24"
+        >
           <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
             <h2>{t("transferToThePersonWhoPaid")}</h2>
             {bank ? (

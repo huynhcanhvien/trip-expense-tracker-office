@@ -82,12 +82,20 @@ export default async function GroupPage({
         >
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2>{t("groupExpenses")}</h2>
-            <Link
-              href={`/statistics?group=${groupId}`}
-              className="inline-flex min-h-11 items-center text-xs font-semibold text-primary"
-            >
-              {t("statistics")}
-            </Link>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                href={`/groups/${groupId}/recurring`}
+                className="inline-flex min-h-11 items-center text-xs font-semibold text-primary"
+              >
+                {t("recurring")}
+              </Link>
+              <Link
+                href={`/statistics?group=${groupId}`}
+                className="inline-flex min-h-11 items-center text-xs font-semibold text-primary"
+              >
+                {t("statistics")}
+              </Link>
+            </div>
           </div>
           {expenses.length ? (
             <div className="mt-3">

@@ -25,6 +25,17 @@ export type ExpenseStatus =
 /** Expenses the payer has not accepted never count toward balances. */
 export const isUnapproved = (status: ExpenseStatus) =>
   status === "awaiting_payer" || status === "rejected";
+export const CATEGORIES = [
+  "food",
+  "transport",
+  "office",
+  "entertainment",
+  "utilities",
+  "gift",
+  "other",
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+export type SplitMode = "even" | "custom" | "weight";
 export type Expense = {
   id: string;
   group_id: string;
@@ -39,6 +50,7 @@ export type Expense = {
   reject_reason: string | null;
   approved_at: string | null;
   revision: number;
+  category: Category;
   has_reported: boolean;
   created_at: string;
 };
@@ -47,7 +59,40 @@ export type Share = {
   user_id: string;
   amount: string;
   payment_status: "pending" | "reported" | "confirmed" | "self";
+  weight?: number | null;
+  last_reminded_at?: string | null;
 };
+export type ExpenseChange = {
+  id: string;
+  expense_id: string;
+  actor_id: string | null;
+  action:
+    | "create"
+    | "edit"
+    | "metadata"
+    | "approve"
+    | "reject"
+    | "cancel"
+    | "recurring";
+  changes: Record<string, unknown>;
+  created_at: string;
+};
+export type RecurringExpense = {
+  id: string;
+  group_id: string;
+  creator_id: string;
+  description: string;
+  amount: string;
+  category: Category;
+  split_mode: SplitMode;
+  shares: { userId: string; amount?: string; weight?: number }[];
+  cadence: "weekly" | "monthly";
+  start_date: string;
+  next_date: string;
+  active: boolean;
+  last_error: string | null;
+};
+export type InboxCounts = { unread: number; toPay: number; approvals: number };
 export type BankAccount = {
   user_id: string;
   bank_name: string;

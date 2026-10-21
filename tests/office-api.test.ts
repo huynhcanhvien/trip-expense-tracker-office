@@ -261,10 +261,14 @@ describe("cloud cleanup authorization", () => {
       .fn()
       .mockResolvedValue({ error: { message: "unavailable" } });
     mocks.admin.mockReturnValue({
-      rpc: vi.fn().mockResolvedValue({
-        data: [{ id, path: "original", preview_path: "preview" }],
-        error: null,
-      }),
+      rpc: vi.fn(async (name: string) =>
+        name === "claim_cleanup_uploads"
+          ? {
+              data: [{ id, path: "original", preview_path: "preview" }],
+              error: null,
+            }
+          : { data: 0, error: null },
+      ),
       from,
       storage: { from: vi.fn().mockReturnValue({ remove }) },
     });
@@ -274,8 +278,38 @@ describe("cloud cleanup authorization", () => {
       }),
     );
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ removed: 0, failed: 1 });
+    expect(await response.json()).toEqual({
+      removed: 0,
+      failed: 1,
+      recurring: 0,
+      reminders: 0,
+      pushed: 0,
+    });
     expect(from).not.toHaveBeenCalled();
     expect(remove).toHaveBeenCalledWith(["original", "preview"]);
+  });
+  it("runs recurring expenses and reminders daily and reports scheduler failures", async () => {
+    vi.stubEnv("CRON_SECRET", "test-secret");
+    const rpc = vi.fn(async (name: string) =>
+      name === "run_recurring"
+        ? { data: null, error: { message: "boom" } }
+        : name === "auto_remind_payments"
+          ? { data: 4, error: null }
+          : { data: [], error: null },
+    );
+    mocks.admin.mockReturnValue({ rpc });
+    const response = await cleanup(
+      new Request("https://office.example/api/cron/cleanup", {
+        headers: { Authorization: "Bearer test-secret" },
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      recurring: -1,
+      reminders: 4,
+    });
+    expect(rpc).toHaveBeenCalledWith("run_recurring", {
+      p_today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
   });
 });

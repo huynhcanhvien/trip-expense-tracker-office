@@ -11,6 +11,9 @@ const english: Record<string, string> = {
   "Có khoản chi cần bạn xác nhận": "An expense paid by you needs your approval",
   "Người trả tiền đã xác nhận khoản chi": "The payer approved your expense",
   "Người trả tiền đã từ chối khoản chi": "The payer rejected your expense",
+  "Nhắc: bạn còn khoản cần trả": "Reminder: you still have a share to pay",
+  "Khoản chi định kỳ đã tạm dừng do lỗi":
+    "A recurring expense was paused because it could not be created",
   "Khoản chi đã bị hủy; kiểm tra đối soát":
     "An expense was cancelled; review reconciliation",
   "Vui lòng đăng nhập để tiếp tục.": "Please sign in to continue.",
@@ -64,6 +67,22 @@ const english: Record<string, string> = {
   "Còn expense đang chờ duyệt liên quan đến bạn; hãy xử lý trước khi rời nhóm.":
     "Some expenses involving you are still awaiting approval; resolve them before leaving.",
   "Mã ngân hàng không hợp lệ.": "Invalid bank code.",
+  "Danh mục không hợp lệ.": "Invalid category.",
+  "Số phần của mỗi người phải là số nguyên từ 1 đến 100.":
+    "Each person's portion must be a whole number from 1 to 100.",
+  "Bạn vừa nhắc khoản này. Hãy thử lại sau.":
+    "You reminded this recently. Try again later.",
+  "Khoản này không còn cần trả.": "This share no longer needs paying.",
+  "Chu kỳ không hợp lệ.": "Invalid schedule.",
+  "Ngày bắt đầu không được ở quá khứ.": "The start date can't be in the past.",
+  "Hãy nhập mô tả.": "Enter a description.",
+  "Chỉ người tạo hoặc quản trị viên nhóm được dừng khoản định kỳ.":
+    "Only its creator or the group administrator can stop a recurring expense.",
+  "Bạn đã bật thông báo trên quá nhiều thiết bị.":
+    "Notifications are already on for too many devices.",
+  "Đã gửi lời nhắc.": "Reminder sent.",
+  "Đã lưu khoản chi định kỳ.": "Recurring expense saved.",
+  "Đã dừng khoản chi định kỳ.": "Recurring expense stopped.",
   "Đã duyệt expense.": "Expense approved.",
   "Đã từ chối expense.": "Expense rejected.",
   "Đã có người báo chuyển hoặc expense đã hủy; không thể sửa phần chia.":

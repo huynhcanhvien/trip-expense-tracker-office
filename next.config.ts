@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Browsers must pick up service worker updates promptly.
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache" }],
+      },
     ];
   },
 };

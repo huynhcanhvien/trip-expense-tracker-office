@@ -3,24 +3,9 @@ import Link from "next/link";
 import MonthlySpending from "./MonthlySpending";
 import AppShell from "@/app/components/AppShell";
 import { Heading, Empty, money } from "@/app/components/OfficeUI";
-import {
-  officeContext,
-  groupsForUser,
-  collectRows,
-  profilesFor,
-} from "@/lib/office-data";
 import { calculateStats } from "@/lib/office-stats";
-import type { Expense, Share } from "@/lib/office-types";
-function vietnamDate() {
-  const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const v = (key: string) => p.find((x) => x.type === key)?.value;
-  return `${v("year")}-${v("month")}-${v("day")}`;
-}
+import { reportData } from "@/lib/office-report";
+import CategoryBreakdown from "./CategoryBreakdown";
 export default async function StatisticsPage({
   searchParams,
 }: {
@@ -29,60 +14,8 @@ export default async function StatisticsPage({
   const t = await getTranslations("statistics");
   const format = await getFormatter();
   const filters = await searchParams;
-  const { supabase, user } = await officeContext();
-  const groups = await groupsForUser();
-  const chosen = filters.group
-    ? groups.filter((g) => g.id === filters.group)
-    : groups;
-  const today = vietnamDate();
-  const validDate = (d?: string) =>
-    !!d &&
-    /^\d{4}-\d{2}-\d{2}$/.test(d) &&
-    !Number.isNaN(new Date(`${d}T00:00:00Z`).getTime()) &&
-    new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
-  const from = validDate(filters.from)
-    ? filters.from!
-    : `${today.slice(0, 7)}-01`;
-  const to = validDate(filters.to) ? filters.to! : today;
-  let expenses: Expense[] = [];
-  let shares: Share[] = [];
-  if (chosen.length && from <= to) {
-    for (let start = 0; start < chosen.length; start += 100) {
-      const groupIds = chosen.slice(start, start + 100).map((g) => g.id);
-      expenses.push(
-        ...(await collectRows<Expense>((a, b) =>
-          supabase
-            .from("office_expenses")
-            .select("*")
-            .in("group_id", groupIds)
-            .gte("expense_date", from)
-            .lte("expense_date", to)
-            .order("id")
-            .range(a, b),
-        )),
-      );
-    }
-    for (let start = 0; start < expenses.length; start += 100) {
-      const expenseIds = expenses.slice(start, start + 100).map((e) => e.id);
-      shares.push(
-        ...(await collectRows<Share>((a, b) =>
-          supabase
-            .from("office_shares")
-            .select("*")
-            .in("expense_id", expenseIds)
-            .order("expense_id")
-            .order("user_id")
-            .range(a, b),
-        )),
-      );
-    }
-    expenses = expenses.map((e) => ({ ...e, amount: String(e.amount) }));
-    shares = shares.map((s) => ({ ...s, amount: String(s.amount) }));
-  }
-  const names = await profilesFor([
-    ...shares.map((s) => s.user_id),
-    ...expenses.map((e) => e.payer_id),
-  ]);
+  const { user, groups, chosen, from, to, expenses, shares, names } =
+    await reportData(filters);
   const stats = calculateStats(chosen, expenses, shares, user.id);
   const cancelled = expenses.filter((e) => e.status === "cancelled");
   return (
@@ -117,6 +50,19 @@ export default async function StatisticsPage({
         <button className="min-h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">
           {t("filter")}
         </button>
+        {from <= to && chosen.length > 0 && (
+          <a
+            href={`/statistics/export?${new URLSearchParams({
+              ...(filters.group ? { group: filters.group } : {}),
+              from,
+              to,
+            })}`}
+            download
+            className="inline-flex min-h-11 items-center rounded-xl border border-input bg-surface-raised px-5 text-sm font-semibold hover:bg-muted"
+          >
+            {t("exportCsv")}
+          </a>
+        )}
       </form>
       {from > to && (
         <p
@@ -188,6 +134,7 @@ export default async function StatisticsPage({
               </dl>
             </section>
           </div>
+          <CategoryBreakdown categories={s.categories} currency={s.currency} />
           <section className="mt-5 min-w-0 rounded-2xl border bg-surface p-5 shadow-soft sm:p-6">
             <h3>{t("byMember")}</h3>
             <div className="hidden md:block mt-5 w-full overflow-x-auto">

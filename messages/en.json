@@ -36,7 +36,8 @@
     "profile": "Profile",
     "unread": "{count} unread",
     "addExpense": "Expense",
-    "groupActions": "Group actions"
+    "groupActions": "Group actions",
+    "actionsNeeded": "{toPay} to pay, {approvals} to approve"
   },
   "shell": {
     "brand": "Office Split",
@@ -139,7 +140,8 @@
     "leaveWarning": "You can leave only after the person who paid has confirmed all your payments, and you have confirmed receipt of all amounts others owe you. Cancelled expenses do not count; payables and receivables are not netted. Expense and payment history is kept; you will lose access and must request approval to join again.",
     "confirmLeave": "Confirm leaving group",
     "leaveConfirmation": "I want to leave this group",
-    "groupDetails": "Group members and management"
+    "groupDetails": "Group members and management",
+    "recurring": "Recurring"
   },
   "newExpense": {
     "createExpense": "Create expense",
@@ -195,7 +197,8 @@
     "memberPaymentQr": "Payment QR for {name}",
     "qrUnavailable": "QR unavailable for this amount.",
     "addBankForQr": "Pick your bank on your profile to generate payment QR codes.",
-    "bankAfterApproval": "Bank details appear once the payer approves this expense."
+    "bankAfterApproval": "Bank details appear once the payer approves this expense.",
+    "remindName": "Remind {name}"
   },
   "statistics": {
     "statistics": "Statistics",
@@ -241,7 +244,11 @@
     "byDay": "Day",
     "dailyChartLabel": "Daily spending chart ({currency})",
     "dailyData": "View daily data",
-    "day": "Day"
+    "day": "Day",
+    "byCategory": "Spending by category",
+    "expenseCount": "{count, plural, one {# expense} other {# expenses}}",
+    "noSpending": "No spending in this period.",
+    "exportCsv": "Export CSV"
   },
   "notifications": {
     "notifications": "Notifications",
@@ -276,7 +283,8 @@
     "preferences": "Appearance & language",
     "preferencesDescription": "Your preferences are saved for your next visit.",
     "themeChoice": "Choose appearance",
-    "languageChoice": "Choose language"
+    "languageChoice": "Choose language",
+    "notifications": "Notifications"
   },
   "invite": {
     "invitationExpired": "Invitation expired",
@@ -357,7 +365,11 @@
     "shareLabel": "{name}'s share",
     "whoPaid": "Who paid",
     "me": "Me",
-    "needsPayerApproval": "{name} must approve this expense before members are asked to pay."
+    "needsPayerApproval": "{name} must approve this expense before members are asked to pay.",
+    "category": "Category",
+    "splitByPortions": "Split by portions",
+    "portions": "Portions",
+    "portionsLabel": "{name}'s portions"
   },
   "bank": {
     "saveBankAccount": "Save bank account",
@@ -465,5 +477,86 @@
     "reason": "Reason",
     "waitingFor": "Waiting for {name} to approve. Shares don't count until then.",
     "rejectedNotice": "{name} rejected this expense: {reason}. Edit it or cancel it."
+  },
+  "categories": {
+    "food": "Food & drinks",
+    "transport": "Transport",
+    "office": "Office supplies",
+    "entertainment": "Entertainment",
+    "utilities": "Utilities & bills",
+    "gift": "Gifts & celebrations",
+    "other": "Other"
+  },
+  "changeLog": {
+    "title": "Change log",
+    "member": "Member",
+    "automatic": "Created automatically",
+    "empty": "No changes recorded yet.",
+    "actions": {
+      "create": "Expense created",
+      "edit": "Amounts or shares edited",
+      "metadata": "Details edited",
+      "approve": "Approved by payer",
+      "reject": "Rejected by payer",
+      "cancel": "Expense cancelled",
+      "recurring": "Created from a recurring schedule"
+    },
+    "fields": {
+      "description": "Description",
+      "amount": "Amount",
+      "expense_date": "Date",
+      "payer_id": "Paid by",
+      "category": "Category",
+      "reason": "Reason",
+      "shareOf": "{name}'s share"
+    }
+  },
+  "export": {
+    "columns": {
+      "date": "Date",
+      "group": "Group",
+      "description": "Description",
+      "category": "Category",
+      "expenseStatus": "Expense status",
+      "total": "Total",
+      "currency": "Currency",
+      "paidBy": "Paid by",
+      "addedBy": "Added by",
+      "member": "Member",
+      "share": "Share",
+      "paymentStatus": "Payment status"
+    }
+  },
+  "recurring": {
+    "title": "Recurring expenses",
+    "pageDescription": "Bills that repeat every week or month are added automatically each morning. You pay them, members split them equally.",
+    "schedules": "Schedules",
+    "empty": "No recurring expenses yet.",
+    "new": "New recurring expense",
+    "save": "Save schedule",
+    "description": "Description",
+    "amount": "Amount ({currency})",
+    "category": "Category",
+    "cadence": "Repeats",
+    "monthly": "Monthly",
+    "weekly": "Weekly",
+    "startDate": "First date",
+    "participants": "Split between ({selected}/{total})",
+    "member": "Member",
+    "hint": "Each occurrence is created as an expense paid by you. Members who leave the group are skipped.",
+    "paidBy": "Paid by {name}",
+    "nextOn": "Next on {date}",
+    "paused": "Paused after an error. Create a new schedule.",
+    "stopped": "Stopped",
+    "stop": "Stop"
+  },
+  "push": {
+    "on": "Notifications are on for this device.",
+    "off": "Get a notification on this device when you need to pay or approve something.",
+    "unsupported": "This browser doesn't support notifications. On iPhone, add the app to your Home Screen first.",
+    "blocked": "Notifications are blocked. Allow them in your browser settings.",
+    "enable": "Turn on notifications",
+    "disable": "Turn off notifications",
+    "failed": "Couldn't change notification settings. Try again."
   }
 }

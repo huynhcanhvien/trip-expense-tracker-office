@@ -33,6 +33,7 @@ export type CurrencyStats = {
   people: PersonTotals[];
   months: { month: string; amount: string }[];
   days: { day: string; amount: string }[];
+  categories: { category: string; amount: string; count: number }[];
 };
 const add = (a: string, b: string) => new Big(a).plus(b).toString();
 const empty = (): Totals => ({
@@ -69,6 +70,7 @@ export function calculateStats(
       people: Map<string, PersonTotals>;
       months: Map<string, string>;
       days: Map<string, string>;
+      categories: Map<string, { amount: string; count: number }>;
     }
   >();
   for (const group of groups) {
@@ -78,6 +80,7 @@ export function calculateStats(
         people: new Map(),
         months: new Map(),
         days: new Map(),
+        categories: new Map(),
       });
   }
   for (const e of expenses) {
@@ -111,6 +114,12 @@ export function calculateStats(
       e.expense_date,
       add(b.days.get(e.expense_date) || "0", e.amount),
     );
+    const category = e.category || "other";
+    const current = b.categories.get(category) || { amount: "0", count: 0 };
+    b.categories.set(category, {
+      amount: add(current.amount, e.amount),
+      count: current.count + 1,
+    });
     person(e.payer_id).advanced = add(person(e.payer_id).advanced, e.amount);
     if (e.payer_id === userId)
       b.totals.advanced = add(b.totals.advanced, e.amount);
@@ -152,5 +161,13 @@ export function calculateStats(
     days: [...b.days]
       .sort(([a], [z]) => a.localeCompare(z))
       .map(([day, amount]) => ({ day, amount })),
+    // Largest spending first; ties keep a stable alphabetical order.
+    categories: [...b.categories]
+      .map(([category, v]) => ({ category, ...v }))
+      .sort(
+        (x, y) =>
+          new Big(y.amount).cmp(x.amount) ||
+          x.category.localeCompare(y.category),
+      ),
   }));
 }

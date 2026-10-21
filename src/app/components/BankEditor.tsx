@@ -48,17 +48,20 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
         label={t("saveBankAccount")}
         submitDisabled={uploadBusy}
       >
-        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
-          {t("bank")}
-          <input
-            name="bankName"
-            list="vietqr-banks"
-            autoComplete="off"
-            value={bankName}
-            onChange={(event) => changeBankName(event.target.value)}
-            required
-            maxLength={100}
-          />
+        <div className="flex min-w-0 flex-col gap-2">
+          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+            {t("bank")}
+            <input
+              name="bankName"
+              list="vietqr-banks"
+              autoComplete="off"
+              aria-describedby="bank-vietqr-hint"
+              value={bankName}
+              onChange={(event) => changeBankName(event.target.value)}
+              required
+              maxLength={100}
+            />
+          </label>
           <datalist id="vietqr-banks">
             {VIETQR_BANKS.map((option) => (
               <option key={option.bin} value={option.shortName}>
@@ -66,10 +69,10 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
               </option>
             ))}
           </datalist>
-          <span className="text-xs font-normal text-muted-foreground">
+          <p id="bank-vietqr-hint" className="text-xs text-muted-foreground">
             {bankBin ? t("vietQrReady") : t("vietQrPickBank")}
-          </span>
-        </label>
+          </p>
+        </div>
         <input type="hidden" name="bankBin" value={bankBin} />
         <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
           {t("accountNumber")}
