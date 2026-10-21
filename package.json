@@ -67,5 +67,5 @@
     "typescript": "^5",
     "vitest": "^4.1.9"
   },
-  "description": "Office group expenses — Supabase Auth, PostgreSQL, private images and Groq OCR"
+  "description": "Office group expenses \u2014 Supabase Auth, PostgreSQL, private images and Groq OCR"
 }
