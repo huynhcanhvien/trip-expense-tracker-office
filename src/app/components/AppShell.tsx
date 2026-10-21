@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/supabase/server";
 import { inboxCounts } from "@/lib/office-data";
 import { PolicyLinks } from "./PublicPage";
 import AppNavigation, { MobileTabBar } from "./AppNavigation";
+import LiveRefresh from "./LiveRefresh";
 import ThemeToggle from "./ui/theme-toggle";
 import LocaleSwitcher from "./ui/locale-switcher";
 import { buttonVariants } from "./ui/button";
@@ -136,6 +137,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
         </footer>
       </div>
       <MobileTabBar counts={counts} />
+      <LiveRefresh userId={user.id} />
     </div>
   );
 }

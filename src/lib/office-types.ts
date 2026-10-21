@@ -92,7 +92,12 @@ export type RecurringExpense = {
   active: boolean;
   last_error: string | null;
 };
-export type InboxCounts = { unread: number; toPay: number; approvals: number };
+export type InboxCounts = {
+  unread: number;
+  toPay: number;
+  toConfirm: number;
+  approvals: number;
+};
 export type BankAccount = {
   user_id: string;
   bank_name: string;

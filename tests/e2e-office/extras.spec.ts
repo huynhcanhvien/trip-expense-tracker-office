@@ -224,6 +224,10 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
       payerPage.getByRole("heading", { name: "Bạn đã trả khoản này?" }),
     ).toHaveCount(0);
     await expect(payerPage.getByText("Đang thu").first()).toBeVisible();
+    // The creator's open page updates live, without a reload.
+    await expect(
+      creatorPage.getByText(`Đang chờ ${payer.name} duyệt`),
+    ).toHaveCount(0, { timeout: 20_000 });
 
     // Debtor sees what to pay, with a QR carrying the exact amount.
     const debtorPage = await signedIn(browser, 2);
@@ -234,7 +238,7 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
             ? "mobile-tab-bar"
             : "desktop-navigation",
         )
-        .getByLabel("1 khoản cần trả, 0 khoản cần duyệt"),
+        .getByLabel("1 khoản cần trả, 0 khoản cần xác nhận, 0 khoản cần duyệt"),
     ).toBeVisible();
     await debtorPage.goto("/notifications?filter=toPay");
     await expect(debtorPage.getByText(`Trả cho ${payer.name}`)).toBeVisible();
@@ -269,7 +273,13 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
     await expect(
       creatorPage.getByRole("button", { name: "Xác nhận đã nhận" }),
     ).toHaveCount(0);
-    await payerPage.reload();
+    // The payer finds it under "To confirm" and the badge counts it.
+    await payerPage.goto("/notifications?filter=toConfirm");
+    await expect(
+      payerPage.getByText(`${debtor.name} báo đã chuyển`),
+    ).toBeVisible();
+    await noAxeViolations(payerPage);
+    await payerPage.getByRole("link", { name: /Taxi sân bay/ }).click();
     await payerPage
       .getByRole("button", { name: "Xác nhận đã nhận", exact: true })
       .click();

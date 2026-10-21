@@ -458,4 +458,19 @@ describe("web push and inbox counts", () => {
     expect(after.approvals).toBe(before.approvals + 1);
     expect(after.unread).toBeGreaterThan(0);
   });
+
+  it("counts reported transfers awaiting the payer's confirmation", async () => {
+    const counts = () => t.rpc<{ toConfirm: number }>(owner, "inbox_counts");
+    const before = (await counts()).toConfirm;
+    const group = await t.group();
+    const id = await save(owner, group);
+    await t.rpc(member, "payment_action", [id, "report", member]);
+    await t.rpc(third, "payment_action", [id, "report", third]);
+    expect((await counts()).toConfirm).toBe(before + 2);
+    await t.rpc(owner, "payment_action", [id, "confirm", member]);
+    expect((await counts()).toConfirm).toBe(before + 1);
+    // Only the payer sees them; the reporting member does not.
+    const theirs = await t.rpc<{ toConfirm: number }>(third, "inbox_counts");
+    expect(theirs.toConfirm).toBe(0);
+  });
 });
