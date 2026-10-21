@@ -109,7 +109,7 @@ export default async function GroupPage({
                         new Date(`${e.expense_date}T00:00:00Z`),
                         { dateStyle: "medium" },
                       )}{" "}
-                      · {names.get(e.creator_id)?.name || t("member")}{" "}
+                      · {names.get(e.payer_id)?.name || t("member")}{" "}
                       {t("paidUpfront")}
                     </p>
                     <Badge status={e.status} />

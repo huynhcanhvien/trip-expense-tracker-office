@@ -1,5 +1,10 @@
 import Big from "big.js";
-import type { Expense, Group, Share } from "./office-types";
+import {
+  isUnapproved,
+  type Expense,
+  type Group,
+  type Share,
+} from "./office-types";
 export type Totals = {
   spent: string;
   toCollect: string;
@@ -77,7 +82,7 @@ export function calculateStats(
   }
   for (const e of expenses) {
     const group = byGroup.get(e.group_id);
-    if (!group) continue;
+    if (!group || isUnapproved(e.status)) continue;
     const b = buckets.get(group.currency)!;
     const person = (id: string) => {
       if (!b.people.has(id))
@@ -106,11 +111,8 @@ export function calculateStats(
       e.expense_date,
       add(b.days.get(e.expense_date) || "0", e.amount),
     );
-    person(e.creator_id).advanced = add(
-      person(e.creator_id).advanced,
-      e.amount,
-    );
-    if (e.creator_id === userId)
+    person(e.payer_id).advanced = add(person(e.payer_id).advanced, e.amount);
+    if (e.payer_id === userId)
       b.totals.advanced = add(b.totals.advanced, e.amount);
     for (const s of parts) {
       const p = person(s.user_id);
@@ -127,15 +129,15 @@ export function calculateStats(
       } else {
         b.totals.outstanding = add(b.totals.outstanding, s.amount);
         p.toPay = add(p.toPay, s.amount);
-        person(e.creator_id).toReceive = add(
-          person(e.creator_id).toReceive,
+        person(e.payer_id).toReceive = add(
+          person(e.payer_id).toReceive,
           s.amount,
         );
         if (s.payment_status === "reported")
           b.totals.reported = add(b.totals.reported, s.amount);
         if (s.user_id === userId)
           b.totals.toPay = add(b.totals.toPay, s.amount);
-        if (e.creator_id === userId)
+        if (e.payer_id === userId)
           b.totals.toReceive = add(b.totals.toReceive, s.amount);
       }
     }

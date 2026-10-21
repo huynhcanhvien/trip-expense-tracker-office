@@ -1,15 +1,46 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import ImageUpload from "./ImageUpload";
 import SavedImage from "./SavedImage";
 import ActionForm from "./ActionForm";
 import { saveBank } from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
+import { bankByBin, bankByName, VIETQR_BANKS } from "@/lib/vietqr-banks";
+import { decodeVietQrImage } from "@/lib/qr-decode";
+type QrNotice = "" | "filled" | "unknownBank" | "notFound";
 export default function BankEditor({ bank }: { bank: BankAccount | null }) {
   const t = useTranslations("bank");
   const [qr, setQr] = useState(bank?.qr_upload_id || "");
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [bankName, setBankName] = useState(bank?.bank_name || "");
+  const [bankBin, setBankBin] = useState(
+    bank?.bank_bin || bankByName(bank?.bank_name || "")?.bin || "",
+  );
+  const [accountNumber, setAccountNumber] = useState(
+    bank?.account_number || "",
+  );
+  const [accountHolder, setAccountHolder] = useState(
+    bank?.account_holder || "",
+  );
+  const [qrNotice, setQrNotice] = useState<QrNotice>("");
+  const changeBankName = (value: string) => {
+    setBankName(value);
+    const match = bankByName(value);
+    // A BIN read from a QR for a bank missing from our list survives renaming.
+    setBankBin((bin) => (match ? match.bin : bankByBin(bin) ? "" : bin));
+  };
+  const readQr = useCallback(async (image: Blob) => {
+    setQrNotice("");
+    const account = await decodeVietQrImage(image).catch(() => null);
+    if (!account) return setQrNotice("notFound");
+    const known = bankByBin(account.bin);
+    setBankBin(account.bin);
+    if (known) setBankName(known.shortName);
+    setAccountNumber(account.accountNumber);
+    if (account.holderName) setAccountHolder(account.holderName);
+    setQrNotice(known ? "filled" : "unknownBank");
+  }, []);
   return (
     <>
       <ActionForm
@@ -21,17 +52,32 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
           {t("bank")}
           <input
             name="bankName"
-            defaultValue={bank?.bank_name || ""}
+            list="vietqr-banks"
+            autoComplete="off"
+            value={bankName}
+            onChange={(event) => changeBankName(event.target.value)}
             required
             maxLength={100}
           />
+          <datalist id="vietqr-banks">
+            {VIETQR_BANKS.map((option) => (
+              <option key={option.bin} value={option.shortName}>
+                {option.name}
+              </option>
+            ))}
+          </datalist>
+          <span className="text-xs font-normal text-muted-foreground">
+            {bankBin ? t("vietQrReady") : t("vietQrPickBank")}
+          </span>
         </label>
+        <input type="hidden" name="bankBin" value={bankBin} />
         <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
           {t("accountNumber")}
           <input
             name="accountNumber"
             inputMode="numeric"
-            defaultValue={bank?.account_number || ""}
+            value={accountNumber}
+            onChange={(event) => setAccountNumber(event.target.value)}
             required
             maxLength={50}
           />
@@ -40,7 +86,8 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
           {t("accountHolderName")}
           <input
             name="accountHolder"
-            defaultValue={bank?.account_holder || ""}
+            value={accountHolder}
+            onChange={(event) => setAccountHolder(event.target.value)}
             required
             maxLength={150}
           />
@@ -77,8 +124,21 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
           <ImageUpload
             kind="qr"
             onBusyChange={setUploadBusy}
+            onPrepared={readQr}
             onUploaded={(v) => setQr(v.id)}
           />
+          {qrNotice && (
+            <p
+              aria-live="polite"
+              className={
+                qrNotice === "filled"
+                  ? "rounded-xl bg-success-soft p-3 text-sm leading-6 text-success"
+                  : "rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground"
+              }
+            >
+              {t(`qrNotice.${qrNotice}`)}
+            </p>
+          )}
         </div>
       </ActionForm>
     </>

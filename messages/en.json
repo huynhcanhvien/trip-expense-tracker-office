@@ -78,7 +78,8 @@
     "exempt": "No transfer needed",
     "pending": "Unpaid",
     "approved": "Joined",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "awaiting_payer": "Awaiting payer approval"
   },
   "dashboard": {
     "you": "you",
@@ -142,7 +143,7 @@
   },
   "newExpense": {
     "createExpense": "Create expense",
-    "youPaidUpfrontSelectThePeople": "You paid upfront. Select the people sharing this expense."
+    "youPaidUpfrontSelectThePeople": "Choose who paid and the people sharing this expense."
   },
   "editExpense": {
     "expenseDetails": "← Expense details",
@@ -186,7 +187,15 @@
     "cancellationReason": "Cancellation reason",
     "payerLine": "{date} · Paid upfront by {name}",
     "progress": "{confirmed}/{required} repayments confirmed · Received {amount}",
-    "cancelledNotice": "Cancelled: {reason}. Confirmed payments of {amount} must be reconciled or refunded outside the app."
+    "cancelledNotice": "Cancelled: {reason}. Confirmed payments of {amount} must be reconciled or refunded outside the app.",
+    "addedBy": "Added by {name}",
+    "yourPaymentQr": "Payment QR for your share of {amount}",
+    "scanToPay": "Scan with your banking app to pay {amount}",
+    "memberQrCodes": "Show payment QR for each member",
+    "memberPaymentQr": "Payment QR for {name}",
+    "qrUnavailable": "QR unavailable for this amount.",
+    "addBankForQr": "Pick your bank on your profile to generate payment QR codes.",
+    "bankAfterApproval": "Bank details appear once the payer approves this expense."
   },
   "statistics": {
     "statistics": "Statistics",
@@ -240,7 +249,21 @@
     "youHaveNoNotificationsYet": "You have no notifications yet.",
     "viewDetails": "View details →",
     "markAsRead": "Mark as read",
-    "summary": "{count} unread among the latest 100 notifications"
+    "summary": "{count} unread among the latest 100 notifications",
+    "filterLabel": "Filter notifications",
+    "filters": {
+      "all": "All",
+      "toPay": "To pay",
+      "approvals": "Needs approval"
+    },
+    "filterSummary": {
+      "toPay": "Shares you still owe. Open one to pay with its QR code.",
+      "approvals": "Expenses others recorded with you as the payer."
+    },
+    "nothingToPay": "You're all settled. Nothing to pay.",
+    "nothingToApprove": "No expenses are waiting for your approval.",
+    "payTo": "Pay {name}",
+    "addedBy": "Added by {name}"
   },
   "profile": {
     "yourProfile": "Your profile",
@@ -331,7 +354,10 @@
     "createExpense": "Create expense",
     "saving": "Saving…",
     "amountPreview": "Amount to save: {amount}",
-    "shareLabel": "{name}'s share"
+    "shareLabel": "{name}'s share",
+    "whoPaid": "Who paid",
+    "me": "Me",
+    "needsPayerApproval": "{name} must approve this expense before members are asked to pay."
   },
   "bank": {
     "saveBankAccount": "Save bank account",
@@ -342,7 +368,14 @@
     "forExampleNguyenVanARepayment": "For example: Nguyen Van A repayment",
     "bankQRCode": "Bank QR code",
     "yourBankQRCode": "Your bank QR code",
-    "removeQR": "Remove QR"
+    "removeQR": "Remove QR",
+    "vietQrReady": "Payment QR codes with exact amounts will be generated for members.",
+    "vietQrPickBank": "Pick your bank from the list so members get a payment QR with the exact amount.",
+    "qrNotice": {
+      "filled": "Bank details filled from your QR. Please review before saving.",
+      "unknownBank": "Account filled from your QR, but the bank isn't in our list. Type the bank name.",
+      "notFound": "Couldn't read a VietQR code from this image. Enter the details manually."
+    }
   },
   "scanner": {
     "scanReceipt": "Scan receipt",
@@ -422,5 +455,15 @@
     "confirm": "Permanently delete group",
     "pending": "Deleting…",
     "cancel": "Keep group"
+  },
+  "approval": {
+    "title": "Did you pay for this?",
+    "explain": "{name} recorded this expense with you as the payer. Approve it so members can repay you, or reject it if it's wrong.",
+    "approve": "Approve, I paid",
+    "reject": "Reject",
+    "confirmReject": "Reject expense",
+    "reason": "Reason",
+    "waitingFor": "Waiting for {name} to approve. Shares don't count until then.",
+    "rejectedNotice": "{name} rejected this expense: {reason}. Edit it or cancel it."
   }
 }

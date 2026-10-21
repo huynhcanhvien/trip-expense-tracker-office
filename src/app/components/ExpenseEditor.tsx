@@ -15,12 +15,14 @@ export default function ExpenseEditor({
   groupId,
   currency,
   members,
+  currentUserId,
   expense,
   shares = [],
 }: {
   groupId: string;
   currency: string;
   members: Member[];
+  currentUserId: string;
   expense?: Expense;
   shares?: Share[];
 }) {
@@ -49,6 +51,14 @@ export default function ExpenseEditor({
   const [custom, setCustom] = useState<Record<string, string>>(
     Object.fromEntries(shares.map((s) => [s.user_id, s.amount])),
   );
+  // A payer who has since left the group can't be kept; default back to the editor.
+  const [payer, setPayer] = useState(
+    expense && members.some((m) => m.user_id === expense.payer_id)
+      ? expense.payer_id
+      : currentUserId,
+  );
+  const payerName =
+    members.find((m) => m.user_id === payer)?.profile?.name || t("member");
   const [scan, setScan] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const dp = decimalPlaces(currency as CurrencyCode);
@@ -104,6 +114,7 @@ export default function ExpenseEditor({
         <input type="hidden" name="groupId" value={groupId} />
         <input type="hidden" name="expenseId" value={expense?.id || ""} />
         <input type="hidden" name="receiptUploadId" value={upload} />
+        <input type="hidden" name="payerId" value={payer} />
         <input
           type="hidden"
           name="shares"
@@ -179,6 +190,30 @@ export default function ExpenseEditor({
             />
           </label>
         </div>
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
+          {t("whoPaid")}
+          <select
+            aria-label={t("whoPaid")}
+            value={payer}
+            onChange={(e) => setPayer(e.target.value)}
+          >
+            {members.map((m) => (
+              <option key={m.user_id} value={m.user_id}>
+                {m.user_id === currentUserId
+                  ? t("me")
+                  : m.profile?.name || t("member")}
+              </option>
+            ))}
+          </select>
+          {payer !== currentUserId && (
+            <span
+              aria-live="polite"
+              className="rounded-xl bg-warning-soft p-3 text-sm font-normal leading-6 text-warning"
+            >
+              {t("needsPayerApproval", { name: payerName })}
+            </span>
+          )}
+        </label>
         <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
           {t("splitMethod")}
           <select

@@ -20,16 +20,25 @@ export type JoinRequest = {
   status: "pending" | "approved" | "rejected";
   profile?: Profile;
 };
+export type ExpenseStatus =
+  "awaiting_payer" | "active" | "completed" | "rejected" | "cancelled";
+/** Expenses the payer has not accepted never count toward balances. */
+export const isUnapproved = (status: ExpenseStatus) =>
+  status === "awaiting_payer" || status === "rejected";
 export type Expense = {
   id: string;
   group_id: string;
   creator_id: string;
+  payer_id: string;
   description: string;
   amount: string;
   expense_date: string;
-  status: "active" | "completed" | "cancelled";
+  status: ExpenseStatus;
   receipt_upload_id: string | null;
   cancel_reason: string | null;
+  reject_reason: string | null;
+  approved_at: string | null;
+  revision: number;
   has_reported: boolean;
   created_at: string;
 };
@@ -46,5 +55,6 @@ export type BankAccount = {
   account_holder: string;
   transfer_template: string;
   qr_upload_id: string | null;
+  bank_bin: string | null;
 };
 export type OfficeState = { error?: string; success?: string };

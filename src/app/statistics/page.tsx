@@ -81,7 +81,7 @@ export default async function StatisticsPage({
   }
   const names = await profilesFor([
     ...shares.map((s) => s.user_id),
-    ...expenses.map((e) => e.creator_id),
+    ...expenses.map((e) => e.payer_id),
   ]);
   const stats = calculateStats(chosen, expenses, shares, user.id);
   const cancelled = expenses.filter((e) => e.status === "cancelled");

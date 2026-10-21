@@ -22,10 +22,13 @@ const expense = (
     status,
     amount,
     creator_id: "a",
+    payer_id: "a",
     description: id,
     expense_date: "2026-10-05",
     receipt_upload_id: null,
     cancel_reason: null,
+    reject_reason: null,
+    approved_at: null,
     has_reported: false,
     created_at: "",
   }) as Expense;
@@ -110,7 +113,7 @@ describe("office statistics", () => {
     expect(s.months).toEqual([]);
   });
   it("never nets payable against receivable", () => {
-    const e2 = { ...expense("f"), creator_id: "b" };
+    const e2 = { ...expense("f"), creator_id: "b", payer_id: "b" };
     const [s] = calculateStats(
       [group("g", "VND")],
       [expense("e"), e2],
@@ -134,5 +137,28 @@ describe("office statistics", () => {
     expect(s.find((x) => x.currency === "USD")?.totals.spent).toBe("0.3");
     expect(s.find((x) => x.currency === "VND")?.totals.spent).toBe("10");
     expect(s.find((x) => x.currency === "USD")?.totals.completed).toBe(1);
+  });
+  it("credits the payer, not the creator, and ignores unapproved expenses", () => {
+    const paidByB = { ...expense("e"), creator_id: "a", payer_id: "b" };
+    const awaiting = { ...expense("w", "g", "awaiting_payer"), payer_id: "b" };
+    const rejected = { ...expense("r", "g", "rejected"), payer_id: "b" };
+    const [s] = calculateStats(
+      [group("g", "VND")],
+      [paidByB, awaiting, rejected],
+      [
+        share("e", "a", "60", "pending"),
+        share("e", "b", "40", "self"),
+        share("w", "a", "100", "pending"),
+        share("r", "a", "100", "pending"),
+      ],
+      "a",
+    );
+    expect(s.totals.spent).toBe("100");
+    expect(s.totals.advanced).toBe("0");
+    expect(s.totals.toPay).toBe("60");
+    expect(s.totals.toReceive).toBe("0");
+    const b = s.people.find((p) => p.userId === "b");
+    expect(b?.advanced).toBe("100");
+    expect(b?.toReceive).toBe("60");
   });
 });

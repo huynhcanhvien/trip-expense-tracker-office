@@ -71,6 +71,7 @@ export default async function EditPage({
             groupId={data.group.id}
             currency={data.group.currency}
             members={members}
+            currentUserId={data.user.id}
             expense={data.expense}
             shares={data.shares}
           />

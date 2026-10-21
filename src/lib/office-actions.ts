@@ -34,7 +34,21 @@ const errorMessage = (error: { message: string }) => {
     "Shares must sum to expense amount":
       "Tổng số tiền từng người phải bằng tổng expense.",
     "Expense creator required":
-      "Chỉ người ứng tiền được sửa expense hoặc xác nhận thanh toán.",
+      "Chỉ người tạo expense được sửa hoặc hủy expense này.",
+    "Expense payer required":
+      "Chỉ người đã trả tiền được duyệt expense hoặc xác nhận thanh toán.",
+    "Payer is not approved": "Người trả tiền phải là thành viên của nhóm.",
+    "Expense is not awaiting approval": "Expense này không còn chờ duyệt.",
+    "Expense is not approved":
+      "Expense chưa được người trả tiền duyệt nên chưa thể thanh toán.",
+    "Rejection reason required": "Hãy nhập lý do từ chối.",
+    "Expense changed since you opened it":
+      "Expense vừa được sửa. Hãy tải lại trang và kiểm tra trước khi duyệt.",
+    "Active expense creator required":
+      "Không thể sửa expense này. Expense đã được người trả duyệt nên chỉ người trả được sửa.",
+    "Pending expense approvals":
+      "Còn expense đang chờ duyệt liên quan đến bạn; hãy xử lý trước khi rời nhóm.",
+    "Invalid bank BIN": "Mã ngân hàng không hợp lệ.",
     "Expense shares are locked":
       "Đã có người báo chuyển hoặc expense đã hủy; không thể sửa phần chia.",
     "Invalid QR upload":
@@ -160,6 +174,7 @@ export async function saveExpense(
     p_split_mode: text(f, "splitMode"),
     p_shares: shares,
     p_receipt_upload_id: text(f, "receiptUploadId") || null,
+    p_payer_id: text(f, "payerId") || null,
   });
   if (error) return { error };
   revalidatePath(`/groups/${text(f, "groupId")}`);
@@ -198,6 +213,27 @@ export async function paymentAction(
   revalidatePath("/notifications");
   return { success: "Đã cập nhật trạng thái thanh toán." };
 }
+export async function approveExpense(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const id = text(f, "expenseId");
+  const approve = text(f, "decision") === "approve";
+  const { error } = await rpc("approve_expense", {
+    p_expense_id: id,
+    p_approve: approve,
+    p_reason: approve ? null : text(f, "reason"),
+    p_revision: Number(text(f, "revision")),
+  });
+  if (error) return { error };
+  revalidatePath(`/expenses/${id}`);
+  revalidatePath(`/groups/${text(f, "groupId")}`);
+  revalidatePath("/statistics");
+  revalidatePath("/notifications");
+  return {
+    success: approve ? "Đã duyệt expense." : "Đã từ chối expense.",
+  };
+}
 export async function cancelExpense(
   _: OfficeState,
   f: FormData,
@@ -223,6 +259,7 @@ export async function saveBank(
     p_account_holder: text(f, "accountHolder"),
     p_transfer_template: text(f, "transferTemplate"),
     p_qr_upload_id: text(f, "qrUploadId") || null,
+    p_bank_bin: text(f, "bankBin") || null,
   });
   if (error) return { error };
   revalidatePath("/profile");

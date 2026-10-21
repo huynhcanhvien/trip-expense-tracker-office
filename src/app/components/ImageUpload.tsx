@@ -13,6 +13,8 @@ type Props = {
   kind: "receipt" | "qr";
   onUploaded: (image: UploadedImage) => void;
   onBusyChange?: (busy: boolean) => void;
+  /** Receives the normalized JPEG before upload, e.g. to read a QR code locally. */
+  onPrepared?: (image: Blob) => void;
 };
 
 async function prepareImage(file: File, kind: "receipt" | "qr"): Promise<Blob> {
@@ -95,6 +97,7 @@ export default function ImageUpload({
   kind,
   onUploaded,
   onBusyChange,
+  onPrepared,
 }: Props) {
   const t = useTranslations("upload");
   const locale = useLocale();
@@ -133,6 +136,7 @@ export default function ImageUpload({
     try {
       const image = await prepareImage(file, kind);
       if (!alive.current) return;
+      onPrepared?.(image);
       candidateUrl = URL.createObjectURL(image);
       previewUrls.current.add(candidateUrl);
       setPreview(candidateUrl);

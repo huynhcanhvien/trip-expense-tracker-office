@@ -146,7 +146,7 @@ export async function groupData(id: string) {
   const names = await profilesFor([
     ...members.map((x) => x.user_id),
     ...requests.map((x) => x.user_id),
-    ...expenses.map((x) => x.creator_id),
+    ...expenses.flatMap((x) => [x.creator_id, x.payer_id]),
   ]);
   return {
     group,
@@ -192,6 +192,7 @@ export async function expenseData(id: string) {
   const names = await profilesFor([
     ...shares.map((s) => s.user_id),
     expense.creator_id,
+    expense.payer_id,
   ]);
   return { user, supabase, expense, group, shares, names };
 }

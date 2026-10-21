@@ -31,6 +31,7 @@ export default async function NewExpensePage({
           groupId={groupId}
           currency={data.group.currency}
           members={data.members}
+          currentUserId={data.user.id}
         />
       </div>
     </AppShell>

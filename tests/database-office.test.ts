@@ -317,7 +317,7 @@ describe("Supabase office migration: actual PostgreSQL functions and RLS", () =>
     await rpc(member, "payment_action", [id, "report", member]);
     await expect(
       rpc(member, "payment_action", [id, "confirm", member]),
-    ).rejects.toThrow(/creator/i);
+    ).rejects.toThrow(/payer/i);
     await rpc(owner, "payment_action", [id, "confirm", member]);
     await rpc(owner, "payment_action", [id, "confirm", member]);
     expect(
@@ -930,5 +930,245 @@ describe("Supabase office migration: actual PostgreSQL functions and RLS", () =>
         ])
       ).rows,
     ).toHaveLength(4);
+  });
+
+  describe("expenses recorded on behalf of another payer", () => {
+    async function groupOfThree() {
+      const group = await groupWithMember();
+      const { rows } = await asUser<{ invite_token: string }>(
+        owner,
+        "select invite_token from office_groups where id=$1",
+        [group],
+      );
+      const request = await rpc<string>(outsider, "request_join", [
+        rows[0].invite_token,
+      ]);
+      await rpc(owner, "decide_join", [request, true]);
+      return group;
+    }
+    const paidByMember = (group: string, id: string | null = null) =>
+      rpc<string>(owner, "save_expense", [
+        id,
+        group,
+        "Taxi",
+        "300",
+        "2026-10-21",
+        "even",
+        JSON.stringify([
+          { userId: owner },
+          { userId: member },
+          { userId: outsider },
+        ]),
+        null,
+        member,
+      ]);
+    const statusOf = async (id: string) =>
+      (
+        await asUser<{ status: string; reject_reason: string | null }>(
+          owner,
+          "select status,reject_reason from office_expenses where id=$1",
+          [id],
+        )
+      ).rows[0];
+    const notificationsFor = async (user: string, id: string) =>
+      (
+        await asUser<{ title: string }>(
+          user,
+          "select title from notifications where expense_id=$1 and user_id=$2",
+          [id, user],
+        )
+      ).rows.map((r) => r.title);
+
+    it("waits for the payer, hides their bank, then lets only the payer confirm", async () => {
+      const group = await groupOfThree();
+      await rpc(member, "save_bank_profile", [
+        "Vietcombank",
+        "0011001234",
+        "TRAN THI B",
+        "",
+        null,
+        "970436",
+      ]);
+      const id = await paidByMember(group);
+      expect((await statusOf(id)).status).toBe("awaiting_payer");
+      const shares = await asUser<{ user_id: string; payment_status: string }>(
+        owner,
+        "select user_id,payment_status from office_shares where expense_id=$1 order by user_id",
+        [id],
+      );
+      expect(shares.rows).toEqual([
+        { user_id: owner, payment_status: "pending" },
+        { user_id: member, payment_status: "self" },
+        { user_id: outsider, payment_status: "pending" },
+      ]);
+      expect(await notificationsFor(member, id)).toEqual([
+        "Có khoản chi cần bạn xác nhận",
+      ]);
+      expect(await notificationsFor(outsider, id)).toEqual([]);
+      const memberBank = () =>
+        asUser(
+          outsider,
+          "select bank_bin from bank_profiles where user_id=$1",
+          [member],
+        );
+      expect((await memberBank()).rows).toHaveLength(0);
+      await expect(
+        rpc(outsider, "payment_action", [id, "report", outsider]),
+      ).rejects.toThrow(/not approved/i);
+      await expect(
+        rpc(owner, "approve_expense", [id, true, null, 0]),
+      ).rejects.toThrow(/payer required/i);
+
+      await rpc(member, "approve_expense", [id, true, null, 0]);
+      expect((await statusOf(id)).status).toBe("active");
+      expect((await memberBank()).rows).toEqual([{ bank_bin: "970436" }]);
+      expect(await notificationsFor(outsider, id)).toEqual([
+        "Bạn có khoản chia tiền mới",
+      ]);
+      expect(await notificationsFor(owner, id)).toContain(
+        "Người trả tiền đã xác nhận khoản chi",
+      );
+      await expect(
+        rpc(member, "approve_expense", [id, true, null, 0]),
+      ).rejects.toThrow(/not awaiting/i);
+
+      await rpc(outsider, "payment_action", [id, "report", outsider]);
+      expect(await notificationsFor(member, id)).toContain(
+        "Thành viên đã báo chuyển tiền",
+      );
+      await expect(
+        rpc(owner, "payment_action", [id, "confirm", outsider]),
+      ).rejects.toThrow(/payer required/i);
+      await rpc(member, "payment_action", [id, "confirm", outsider]);
+      await rpc(owner, "payment_action", [id, "report", owner]);
+      await rpc(member, "payment_action", [id, "confirm", owner]);
+      expect((await statusOf(id)).status).toBe("completed");
+    });
+
+    it("rejects with a reason and returns to approval after the creator edits", async () => {
+      const group = await groupOfThree();
+      const id = await paidByMember(group);
+      await expect(
+        rpc(member, "approve_expense", [id, false, " ", 0]),
+      ).rejects.toThrow(/reason/i);
+      await rpc(member, "approve_expense", [
+        id,
+        false,
+        "Không phải tôi trả",
+        0,
+      ]);
+      expect(await statusOf(id)).toEqual({
+        status: "rejected",
+        reject_reason: "Không phải tôi trả",
+      });
+      expect(await notificationsFor(owner, id)).toContain(
+        "Người trả tiền đã từ chối khoản chi",
+      );
+      await expect(
+        rpc(owner, "payment_action", [id, "report", owner]),
+      ).rejects.toThrow(/not approved/i);
+      await expect(paidByMember(group, id).then(() => undefined)).resolves.toBe(
+        undefined,
+      );
+      expect(await statusOf(id)).toEqual({
+        status: "awaiting_payer",
+        reject_reason: null,
+      });
+      await expect(
+        rpc(member, "approve_expense", [id, true, null, 0]),
+      ).rejects.toThrow(/changed since/i);
+      await rpc(owner, "edit_expense_metadata", [
+        id,
+        "Taxi sân bay",
+        "2026-10-21",
+      ]);
+      await expect(
+        rpc(member, "approve_expense", [id, true, null, 1]),
+      ).rejects.toThrow(/changed since/i);
+      await rpc(member, "approve_expense", [id, true, null, 2]);
+      await expect(
+        rpc(owner, "edit_expense_metadata", [id, "Đổi tên", "2026-10-21"]),
+      ).rejects.toThrow(/Active expense creator required/);
+      await rpc(member, "edit_expense_metadata", [id, "Taxi về", "2026-10-21"]);
+      await expect(
+        rpc(member, "save_expense", [
+          id,
+          group,
+          "Taxi",
+          "300",
+          "2026-10-21",
+          "even",
+          JSON.stringify([{ userId: member }]),
+          null,
+          null,
+        ]),
+      ).rejects.toThrow(/creator required/i);
+    });
+
+    it("keeps self-paid expenses immediate and refuses non-member payers", async () => {
+      const group = await groupWithMember();
+      const id = await expense(group);
+      expect((await statusOf(id)).status).toBe("active");
+      await expect(
+        rpc(owner, "save_expense", [
+          null,
+          group,
+          "Cafe",
+          "10",
+          "2026-10-21",
+          "even",
+          JSON.stringify([{ userId: owner }]),
+          null,
+          outsider,
+        ]),
+      ).rejects.toThrow(/Payer is not approved/);
+    });
+
+    it("blocks leaving while an expense awaits your approval and lets the payer cancel", async () => {
+      const group = await groupOfThree();
+      const id = await paidByMember(group);
+      await expect(rpc(member, "leave_group", [group])).rejects.toThrow(
+        /Pending expense approvals/,
+      );
+      await expect(rpc(outsider, "leave_group", [group])).rejects.toThrow(
+        /Pending expense approvals/,
+      );
+      // The outsider has never approved an expense, so nothing else exposes their bank.
+      await rpc(outsider, "save_bank_profile", [
+        "ACB",
+        "999",
+        "C",
+        "",
+        null,
+        null,
+      ]);
+      const cancelled = await rpc<string>(owner, "save_expense", [
+        null,
+        group,
+        "Cafe",
+        "20",
+        "2026-10-21",
+        "even",
+        JSON.stringify([{ userId: owner }, { userId: member }]),
+        null,
+        outsider,
+      ]);
+      await rpc(owner, "cancel_expense", [cancelled, "Hủy"]);
+      expect(
+        (
+          await asUser(member, "select 1 from bank_profiles where user_id=$1", [
+            outsider,
+          ])
+        ).rows,
+      ).toHaveLength(0);
+      await rpc(member, "cancel_expense", [id, "Ghi nhầm"]);
+      expect((await statusOf(id)).status).toBe("cancelled");
+      expect(await notificationsFor(owner, id)).toContain(
+        "Khoản chi đã bị hủy; kiểm tra đối soát",
+      );
+      await expect(rpc(outsider, "cancel_expense", [id, "x"])).rejects.toThrow(
+        /creator required/i,
+      );
+    });
   });
 });
