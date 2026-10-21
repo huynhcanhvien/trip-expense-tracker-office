@@ -50,6 +50,7 @@ create table public.push_subscriptions (
  user_id uuid not null references public.profiles(id) on delete cascade,
  p256dh text not null check(length(p256dh) between 1 and 200),
  auth text not null check(length(auth) between 1 and 100),
+ locale text not null default 'vi' check(locale in ('vi','en')),
  created_at timestamptz not null default now()
 );
 create index push_subscriptions_user on public.push_subscriptions(user_id);
@@ -252,7 +253,15 @@ begin
  if p_cadence not in ('weekly','monthly') then raise exception 'Invalid cadence'; end if;
  if p_start_date is null or p_start_date<current_date-1 then raise exception 'Start date must not be in the past'; end if;
  if p_description is null or length(trim(p_description)) not between 1 and 500 then raise exception 'Description required'; end if;
- if p_amount !~ '^[0-9]+([.][0-9]+)?$' then raise exception 'Invalid amount'; end if;
+ if jsonb_typeof(p_shares) is distinct from 'array' or jsonb_array_length(p_shares) not between 1 and 100 then raise exception 'Invalid shares'; end if;
+ if (select count(*) from public.recurring_expenses where group_id=p_group_id and active)>=50 then raise exception 'Too many recurring expenses'; end if;
+ -- Dry run: the same validation as a real expense (amount precision, members,
+ -- split totals); the inner block always rolls back.
+ begin
+  perform public.save_expense_as(auth.uid(),null,p_group_id,p_description,p_amount,p_start_date,p_split_mode,p_shares,null,auth.uid(),p_category,'recurring');
+  raise exception using errcode='P0099',message='recurring dry run';
+ exception when sqlstate 'P0099' then null;
+ end;
  insert into public.recurring_expenses(group_id,creator_id,description,amount,category,split_mode,shares,cadence,start_date,next_date)
  values(p_group_id,auth.uid(),trim(p_description),p_amount::numeric,coalesce(p_category,'other'),p_split_mode,p_shares,p_cadence,p_start_date,p_start_date)
  returning id into v_id;
@@ -294,19 +303,23 @@ begin
 end $$;
 
 -- Web push: browsers register here; the server claims unsent notifications in batches.
-create function public.save_push_subscription(p_endpoint text,p_p256dh text,p_auth text) returns void language plpgsql security definer set search_path='' as $$
+-- Re-saving an endpoint moves it to the signed-in user, so a shared device only
+-- receives notifications for whoever enabled push last.
+create function public.save_push_subscription(p_endpoint text,p_p256dh text,p_auth text,p_locale text default 'vi') returns void language plpgsql security definer set search_path='' as $$
 begin
  if auth.uid() is null then raise exception 'Authentication required'; end if;
  if (select count(*) from public.push_subscriptions where user_id=auth.uid() and endpoint!=p_endpoint)>=10 then raise exception 'Too many devices'; end if;
- insert into public.push_subscriptions(endpoint,user_id,p256dh,auth) values(p_endpoint,auth.uid(),p_p256dh,p_auth)
- on conflict(endpoint) do update set user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,created_at=now();
+ insert into public.push_subscriptions(endpoint,user_id,p256dh,auth,locale) values(p_endpoint,auth.uid(),p_p256dh,p_auth,case when p_locale='en' then 'en' else 'vi' end)
+ on conflict(endpoint) do update set user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,locale=excluded.locale,created_at=now();
 end $$;
 
 create function public.delete_push_subscription(p_endpoint text) returns void language sql security definer set search_path='' as $$
  delete from public.push_subscriptions where endpoint=p_endpoint and user_id=auth.uid();
 $$;
 
-create function public.claim_push_notifications(p_limit integer default 100) returns table(id uuid,user_id uuid,title text,expense_id uuid,group_id uuid,endpoint text,p256dh text,auth text)
+-- Rows without an endpoint are claimed notifications for users with no device;
+-- callers use them to know whether more work remains.
+create function public.claim_push_notifications(p_limit integer default 100) returns table(id uuid,user_id uuid,title text,expense_id uuid,group_id uuid,endpoint text,p256dh text,auth text,locale text)
 language plpgsql security definer set search_path='' as $$
 begin
  return query with claimed as (
@@ -314,7 +327,7 @@ begin
    select x.id from public.notifications x where x.pushed_at is null and x.created_at>now()-interval '1 day'
    order by x.created_at limit least(greatest(p_limit,1),500) for update skip locked)
   returning n.id,n.user_id,n.title,n.expense_id,n.group_id
- ) select c.id,c.user_id,c.title,c.expense_id,c.group_id,p.endpoint,p.p256dh,p.auth from claimed c join public.push_subscriptions p on p.user_id=c.user_id;
+ ) select c.id,c.user_id,c.title,c.expense_id,c.group_id,p.endpoint,p.p256dh,p.auth,p.locale from claimed c left join public.push_subscriptions p on p.user_id=c.user_id;
 end $$;
 
 -- Navigation badges in a single round trip per page.

@@ -31,7 +31,18 @@ export default function PushToggle() {
       if (!supported()) return "unsupported";
       if (Notification.permission === "denied") return "blocked";
       const reg = await navigator.serviceWorker.getRegistration("/sw.js");
-      return (await reg?.pushManager.getSubscription()) ? "on" : "off";
+      const sub = await reg?.pushManager.getSubscription();
+      if (!sub) return "off";
+      // Re-bind this device to whoever is signed in now (shared devices).
+      const json = sub.toJSON();
+      const result = await setPushSubscription({
+        endpoint: sub.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth: json.keys?.auth,
+        locale,
+        enabled: true,
+      });
+      return result.error ? "off" : "on";
     }
     detect()
       .catch((): State => "off")
@@ -39,7 +50,7 @@ export default function PushToggle() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [locale]);
   if (!PUBLIC_KEY) return null;
 
   async function enable() {
@@ -61,6 +72,7 @@ export default function PushToggle() {
         endpoint: sub.endpoint,
         p256dh: json.keys?.p256dh,
         auth: json.keys?.auth,
+        locale,
         enabled: true,
       });
       if (result.error) {

@@ -64,9 +64,9 @@ export async function GET(request: Request) {
     }
     let pushed = 0;
     for (let i = 0; i < PUSH_BATCHES; i++) {
-      const { sent } = await deliverPendingPushes();
-      if (!sent) break;
+      const { claimed, sent } = await deliverPendingPushes();
       pushed += sent;
+      if (!claimed) break;
     }
     const scheduledFailed = daily.recurring < 0 || daily.reminders < 0;
     return NextResponse.json(

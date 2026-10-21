@@ -9,13 +9,26 @@ export type ClaimedPush = {
   title: string;
   expense_id: string | null;
   group_id: string | null;
-  endpoint: string;
-  p256dh: string;
-  auth: string;
+  /** Null when the user has no subscribed device; the row is still claimed. */
+  endpoint: string | null;
+  p256dh: string | null;
+  auth: string | null;
+  locale: string | null;
 };
 const BATCH = 100;
 const CONCURRENCY = 10;
 const TTL_SECONDS = 24 * 60 * 60;
+const REMIND_COOLDOWN_MS = 20 * 60 * 60 * 1000;
+
+/** Mirrors remind_payment's 20-hour limit so the button hides instead of failing. */
+export function canRemind(
+  lastRemindedAt: string | null | undefined,
+  now = Date.now(),
+) {
+  return (
+    !lastRemindedAt || now - Date.parse(lastRemindedAt) >= REMIND_COOLDOWN_MS
+  );
+}
 
 export function pushConfig() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -45,18 +58,28 @@ export function pushPayload(row: ClaimedPush, locale = "vi"): string {
  * Push is optional, so a missing configuration or delivery failure never throws.
  */
 export async function deliverPendingPushes(): Promise<{
+  claimed: number;
   sent: number;
   removed: number;
 }> {
   const config = pushConfig();
-  if (!config) return { sent: 0, removed: 0 };
+  if (!config) return { claimed: 0, sent: 0, removed: 0 };
   const admin = adminSupabase();
   const { data, error } = await admin.rpc("claim_push_notifications", {
     p_limit: BATCH,
   });
-  if (error || !data?.length) return { sent: 0, removed: 0 };
+  if (error || !data?.length) return { claimed: 0, sent: 0, removed: 0 };
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
-  const rows = data as ClaimedPush[];
+  const claimed = new Set((data as ClaimedPush[]).map((row) => row.id)).size;
+  const rows = (data as ClaimedPush[]).filter(
+    (
+      row,
+    ): row is ClaimedPush & {
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+    } => Boolean(row.endpoint && row.p256dh && row.auth),
+  );
   const gone: string[] = [];
   let sent = 0;
   for (let i = 0; i < rows.length; i += CONCURRENCY) {
@@ -67,7 +90,7 @@ export async function deliverPendingPushes(): Promise<{
             endpoint: row.endpoint,
             keys: { p256dh: row.p256dh, auth: row.auth },
           },
-          pushPayload(row),
+          pushPayload(row, row.locale || "vi"),
           { TTL: TTL_SECONDS, urgency: "normal" },
         ),
       ),
@@ -81,5 +104,5 @@ export async function deliverPendingPushes(): Promise<{
   }
   if (gone.length)
     await admin.from("push_subscriptions").delete().in("endpoint", gone);
-  return { sent, removed: gone.length };
+  return { claimed, sent, removed: gone.length };
 }

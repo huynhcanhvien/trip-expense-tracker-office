@@ -246,18 +246,20 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
       }),
     ).toBeVisible();
 
-    // Payer reminds once; a second reminder the same day is refused.
+    // Payer reminds once; the button then hides for 20 hours (the database
+    // also refuses repeats, covered by tests/database-extras.test.ts).
     await payerPage.reload();
-    await payerPage
-      .getByRole("button", { name: `Nhắc ${debtor.name}`, exact: true })
-      .click();
-    await expect(payerPage.getByText("Đã gửi lời nhắc.")).toBeVisible();
-    await payerPage
-      .getByRole("button", { name: `Nhắc ${debtor.name}`, exact: true })
-      .click();
+    const remind = payerPage.getByRole("button", {
+      name: `Nhắc ${debtor.name}`,
+      exact: true,
+    });
+    await remind.click();
+    await expect(remind).toHaveCount(0);
+    await debtorPage.goto("/notifications");
     await expect(
-      payerPage.getByText("Bạn vừa nhắc khoản này. Hãy thử lại sau."),
+      debtorPage.getByText("Nhắc: bạn còn khoản cần trả").first(),
     ).toBeVisible();
+    await debtorPage.goBack();
 
     // Debtor reports; only the payer can confirm.
     await debtorPage

@@ -101,11 +101,12 @@ thay thế việc kiểm tra credentials thật hoặc cấu hình Auth dashboar
 4. OCR và xử lý ảnh dùng Node.js runtime, `maxDuration=60`. Chọn gói hosting hỗ
    trợ tối thiểu 60 giây. Upload trực tiếp Storage; không tạo ổ đĩa uploads trên Vercel.
 5. Thêm `CRON_SECRET` ngẫu nhiên ít nhất 32 ký tự. `vercel.json` đăng ký cron
-   `/api/cron/cleanup` mỗi ngày 20:00 UTC. Preview không tự chạy cron production.
+   `/api/cron/cleanup` mỗi ngày 01:00 UTC (08:00 giờ Việt Nam, để nhắc nợ và
+   thông báo không làm phiền ban đêm). Preview không tự chạy cron production.
    Gói Hobby chỉ cho cron chạy 1 lần/ngày, nên job này làm luôn mọi việc định kỳ:
    tạo khoản chi định kỳ (theo ngày giờ Việt Nam), nhắc khoản chưa trả quá 3 ngày,
    dọn ảnh và gửi Web Push còn tồn.
-5b. Web Push (tùy chọn): tạo khóa bằng `npx web-push generate-vapid-keys`, rồi thêm
+   5b. Web Push (tùy chọn): tạo khóa bằng `npx web-push generate-vapid-keys`, rồi thêm
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (bí mật) và
    `VAPID_SUBJECT` (ví dụ `mailto:admin@domain`) vào Vercel trước khi build. Thiếu
    khóa thì app vẫn chạy, chỉ ẩn nút bật thông báo. Trên iPhone, người dùng cần

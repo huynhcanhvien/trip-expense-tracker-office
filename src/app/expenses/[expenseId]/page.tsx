@@ -18,6 +18,7 @@ import {
 } from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
 import { shareVietQr } from "@/lib/vietqr";
+import { canRemind } from "@/lib/push";
 export default async function ExpensePage({
   params,
 }: {
@@ -210,20 +211,26 @@ export default async function ExpensePage({
                           />
                         </ActionForm>
                       )}
-                    {isPayer && s.payment_status === "pending" && (
-                      <ActionForm
-                        action={remindPayment}
-                        label={t("remindName", { name: nameOf(s.user_id) })}
-                        className="flex max-w-full flex-wrap items-center gap-2"
-                      >
-                        <input
-                          type="hidden"
-                          name="expenseId"
-                          value={expense.id}
-                        />
-                        <input type="hidden" name="userId" value={s.user_id} />
-                      </ActionForm>
-                    )}
+                    {isPayer &&
+                      s.payment_status === "pending" &&
+                      canRemind(s.last_reminded_at) && (
+                        <ActionForm
+                          action={remindPayment}
+                          label={t("remindName", { name: nameOf(s.user_id) })}
+                          className="flex max-w-full flex-wrap items-center gap-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="expenseId"
+                            value={expense.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="userId"
+                            value={s.user_id}
+                          />
+                        </ActionForm>
+                      )}
                     {isPayer &&
                       s.payment_status === "reported" &&
                       ["confirm", "reject"].map((operation) => (

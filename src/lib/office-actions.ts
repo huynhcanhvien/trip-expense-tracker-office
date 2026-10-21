@@ -62,6 +62,8 @@ const errorMessage = (error: { message: string }) => {
     "Recurring expense creator required":
       "Chỉ người tạo hoặc quản trị viên nhóm được dừng khoản định kỳ.",
     "Too many devices": "Bạn đã bật thông báo trên quá nhiều thiết bị.",
+    "Too many recurring expenses":
+      "Nhóm đã có quá nhiều khoản định kỳ đang chạy. Hãy dừng bớt trước khi thêm.",
     "Expense shares are locked":
       "Đã có người báo chuyển hoặc expense đã hủy; không thể sửa phần chia.",
     "Invalid QR upload":
@@ -360,6 +362,7 @@ export async function setPushSubscription(input: {
   endpoint: string;
   p256dh?: string;
   auth?: string;
+  locale?: string;
   enabled: boolean;
 }): Promise<OfficeState> {
   if (
@@ -372,6 +375,7 @@ export async function setPushSubscription(input: {
         p_endpoint: input.endpoint,
         p_p256dh: String(input.p256dh || ""),
         p_auth: String(input.auth || ""),
+        p_locale: input.locale === "en" ? "en" : "vi",
       })
     : await rpc("delete_push_subscription", { p_endpoint: input.endpoint });
   return error ? { error } : { success: "ok" };

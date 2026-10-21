@@ -326,6 +326,63 @@ describe("recurring expenses", () => {
     });
   });
 
+  it("validates templates like a real expense without creating one", async () => {
+    const group = await t.group();
+    const today = new Date().toISOString().slice(0, 10);
+    await expect(
+      t.rpc(owner, "save_recurring", [
+        group,
+        "Lẻ",
+        "1000.5",
+        "food",
+        "even",
+        JSON.stringify([{ userId: owner }]),
+        "weekly",
+        today,
+      ]),
+    ).rejects.toThrow(/Invalid currency amount/);
+    await expect(
+      t.rpc(owner, "save_recurring", [
+        group,
+        "Sai tổng",
+        "1000",
+        "food",
+        "custom",
+        JSON.stringify([{ userId: owner, amount: "1" }]),
+        "weekly",
+        today,
+      ]),
+    ).rejects.toThrow(/Shares must sum/);
+    await expect(
+      t.rpc(owner, "save_recurring", [
+        group,
+        "Rỗng",
+        "1000",
+        "food",
+        "even",
+        JSON.stringify({}),
+        "weekly",
+        today,
+      ]),
+    ).rejects.toThrow(/Invalid shares/);
+    await t.rpc(owner, "save_recurring", [
+      group,
+      "Hợp lệ",
+      "1000",
+      "food",
+      "even",
+      JSON.stringify([{ userId: owner }, { userId: member }]),
+      "weekly",
+      today,
+    ]);
+    const { rows } = await t.asUser(
+      owner,
+      "select 1 from office_expenses where group_id=$1",
+      [group],
+    );
+    expect(rows).toHaveLength(0);
+  });
+
   it("lets only the creator or group owner stop a template", async () => {
     const group = await t.group();
     const today = new Date().toISOString().slice(0, 10);
@@ -360,9 +417,13 @@ describe("web push and inbox counts", () => {
     ).rejects.toThrow(/violates check/i);
     await save(owner, group);
     const { rows } = await t.db.query<{ user_id: string; endpoint: string }>(
-      "select user_id,endpoint from public.claim_push_notifications(100)",
+      "select user_id,endpoint from public.claim_push_notifications(100) order by endpoint nulls last",
     );
-    expect(rows).toEqual([{ user_id: member, endpoint }]);
+    // Users without devices are still claimed so delivery knows it is done.
+    expect(rows).toEqual([
+      { user_id: member, endpoint },
+      { user_id: third, endpoint: null },
+    ]);
     const again = await t.db.query(
       "select * from public.claim_push_notifications(100)",
     );

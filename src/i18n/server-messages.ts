@@ -81,6 +81,8 @@ const english: Record<string, string> = {
   "Bạn đã bật thông báo trên quá nhiều thiết bị.":
     "Notifications are already on for too many devices.",
   "Đã gửi lời nhắc.": "Reminder sent.",
+  "Nhóm đã có quá nhiều khoản định kỳ đang chạy. Hãy dừng bớt trước khi thêm.":
+    "This group has too many active recurring expenses. Stop some before adding more.",
   "Đã lưu khoản chi định kỳ.": "Recurring expense saved.",
   "Đã dừng khoản chi định kỳ.": "Recurring expense stopped.",
   "Đã duyệt expense.": "Expense approved.",
