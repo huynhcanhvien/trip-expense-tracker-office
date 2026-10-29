@@ -197,6 +197,9 @@
     "memberPaymentQr": "Payment QR for {name}",
     "qrUnavailable": "QR unavailable for this amount.",
     "addBankForQr": "Pick your bank on your profile to generate payment QR codes.",
+    "autoConfirmed": "Auto-confirmed (48 hours)",
+    "autoConfirmAt": "Confirms automatically at {time} if the payer does not respond within {hours} hours.",
+    "staticQrNoAmount": "This QR does not fill in the amount — enter {amount} when you transfer.",
     "bankAfterApproval": "Bank details appear once the payer approves this expense.",
     "remindName": "Remind {name}"
   },

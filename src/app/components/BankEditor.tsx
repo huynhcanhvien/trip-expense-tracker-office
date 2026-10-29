@@ -6,7 +6,12 @@ import SavedImage from "./SavedImage";
 import ActionForm from "./ActionForm";
 import { saveBank } from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
-import { bankByBin, bankByName, VIETQR_BANKS } from "@/lib/vietqr-banks";
+import {
+  bankByBin,
+  bankByName,
+  resolveBankBin,
+  VIETQR_BANKS,
+} from "@/lib/vietqr-banks";
 import { decodeVietQrImage } from "@/lib/qr-decode";
 type QrNotice = "" | "filled" | "unknownBank" | "notFound";
 export default function BankEditor({ bank }: { bank: BankAccount | null }) {
@@ -14,9 +19,7 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
   const [qr, setQr] = useState(bank?.qr_upload_id || "");
   const [uploadBusy, setUploadBusy] = useState(false);
   const [bankName, setBankName] = useState(bank?.bank_name || "");
-  const [bankBin, setBankBin] = useState(
-    bank?.bank_bin || bankByName(bank?.bank_name || "")?.bin || "",
-  );
+  const [bankBin, setBankBin] = useState((bank && resolveBankBin(bank)) || "");
   const [accountNumber, setAccountNumber] = useState(
     bank?.account_number || "",
   );

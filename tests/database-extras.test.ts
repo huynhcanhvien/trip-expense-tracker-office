@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
 import { createOfficeDb } from "./helpers/officeDb";
 
 const owner = "10000000-0000-4000-8000-0000000000a1";
@@ -217,6 +218,128 @@ describe("payment reminders", () => {
     expect(await titles(third, id)).toHaveLength(3);
     await expect(
       t.rpc(owner, "auto_remind_payments", [later(9)]),
+    ).rejects.toThrow(/permission denied/i);
+  });
+});
+
+describe("auto-confirming reported transfers", () => {
+  const AUTO_TITLE = "Khoản chuyển tiền đã được tự động xác nhận sau 48 giờ";
+  const SENDER_TITLE = "Khoản chuyển tiền của bạn đã được tự động xác nhận";
+  const later = (hours: number) =>
+    new Date(Date.now() + hours * 3_600_000).toISOString();
+  const statusOf = async (expense: string) =>
+    Object.fromEntries(
+      (
+        await t.asUser<{ user_id: string; payment_status: string }>(
+          owner,
+          "select user_id,payment_status from office_shares where expense_id=$1",
+          [expense],
+        )
+      ).rows.map((r) => [r.user_id, r.payment_status]),
+    );
+  const expenseStatus = async (expense: string) =>
+    (
+      await t.asUser<{ status: string }>(
+        owner,
+        "select status from office_expenses where id=$1",
+        [expense],
+      )
+    ).rows[0].status;
+  // Scoped to one expense so reported shares left by other tests don't count.
+  const autoConfirm = (expense: string, hours: number) =>
+    t.service<number>("auto_confirm_payments", [later(hours), 500, expense]);
+  const backdateReport = (expense: string, user: string, hours: number) =>
+    t.db.query(
+      `update office_shares set reported_at=now()-make_interval(hours=>$3) where expense_id=$1 and user_id=$2`,
+      [expense, user, hours],
+    );
+
+  it("confirms transfers the payer left unanswered for 48 hours and notifies both sides", async () => {
+    const group = await t.group();
+    const id = await save(owner, group);
+    await t.rpc(member, "payment_action", [id, "report", member]);
+    expect(await autoConfirm(id, 47)).toBe(0);
+    expect((await statusOf(id))[member]).toBe("reported");
+
+    expect(await autoConfirm(id, 49)).toBe(1);
+    expect(await statusOf(id)).toMatchObject({
+      [member]: "confirmed",
+      [third]: "pending",
+    });
+    expect(await titles(owner, id)).toContain(AUTO_TITLE);
+    expect(await titles(member, id)).toContain(SENDER_TITLE);
+    const events = await t.asUser<{ action: string; actor_id: string }>(
+      owner,
+      "select action,actor_id from payment_events where expense_id=$1 and user_id=$2 order by created_at",
+      [id, member],
+    );
+    expect(events.rows.map((e) => e.action)).toEqual([
+      "report",
+      "auto_confirm",
+    ]);
+    expect(events.rows[1].actor_id).toBe(owner);
+    expect(await expenseStatus(id)).toBe("active");
+    expect(await autoConfirm(id, 60)).toBe(0);
+  });
+
+  it("completes the expense once the last share is auto-confirmed", async () => {
+    const group = await t.group();
+    const id = await save(owner, group);
+    await t.rpc(member, "payment_action", [id, "report", member]);
+    await t.rpc(third, "payment_action", [id, "report", third]);
+    expect(await autoConfirm(id, 49)).toBe(2);
+    expect(await expenseStatus(id)).toBe("completed");
+  });
+
+  it("leaves pending, rejected and cancelled transfers alone", async () => {
+    const group = await t.group();
+    const id = await save(owner, group);
+    await t.rpc(member, "payment_action", [id, "report", member]);
+    await t.rpc(owner, "payment_action", [id, "reject", member]);
+    const cancelled = await save(owner, group);
+    await t.rpc(member, "payment_action", [cancelled, "report", member]);
+    await t.rpc(owner, "cancel_expense", [cancelled, "Nhầm"]);
+    expect(await autoConfirm(id, 100)).toBe(0);
+    expect(await autoConfirm(cancelled, 100)).toBe(0);
+    expect(await statusOf(id)).toMatchObject({
+      [member]: "pending",
+      [third]: "pending",
+    });
+    expect((await statusOf(cancelled))[member]).toBe("reported");
+  });
+
+  it("lets group members settle overdue transfers when a page loads", async () => {
+    const group = await t.group();
+    const id = await save(owner, group);
+    await t.rpc(member, "payment_action", [id, "report", member]);
+    await t.rpc(third, "payment_action", [id, "report", third]);
+    await backdateReport(id, member, 49);
+    await backdateReport(id, third, 47);
+    expect(await t.rpc<number>(third, "settle_overdue_payments", [id])).toBe(1);
+    expect(await statusOf(id)).toMatchObject({
+      [member]: "confirmed",
+      [third]: "reported",
+    });
+    await backdateReport(id, third, 49);
+    expect(await t.rpc<number>(member, "settle_overdue_payments", [null])).toBe(
+      1,
+    );
+    expect(await expenseStatus(id)).toBe("completed");
+  });
+
+  it("keeps outsiders and members from running the service job", async () => {
+    const solo = await t.rpc<string>(member, "create_group", ["Riêng", "VND"]);
+    const id = await save(member, solo, { shares: [{ userId: member }] });
+    // Like the page's 404: an expense the caller cannot see settles nothing.
+    expect(await t.rpc<number>(owner, "settle_overdue_payments", [id])).toBe(0);
+    expect(
+      await t.rpc<number>(owner, "settle_overdue_payments", [randomUUID()]),
+    ).toBe(0);
+    expect(await t.rpc<number>(owner, "settle_overdue_payments", [null])).toBe(
+      0,
+    );
+    await expect(
+      t.rpc(owner, "auto_confirm_payments", [later(49)]),
     ).rejects.toThrow(/permission denied/i);
   });
 });

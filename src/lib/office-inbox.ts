@@ -1,4 +1,9 @@
-import { officeContext, collectRows, profilesFor } from "./office-data";
+import {
+  officeContext,
+  collectRows,
+  profilesFor,
+  settleOverduePayments,
+} from "./office-data";
 import type { Share } from "./office-types";
 
 export type InboxItem = {
@@ -34,7 +39,10 @@ const SHARE_COLUMNS = `amount,payment_status,user_id,expense:office_expenses!inn
 
 /** Shares the viewer still owes (or has reported) on approved, open expenses. */
 export async function payablesData(): Promise<InboxItem[]> {
-  const { supabase, user } = await officeContext("/notifications");
+  const [{ supabase, user }] = await Promise.all([
+    officeContext("/notifications"),
+    settleOverduePayments(),
+  ]);
   const rows = await collectRows<PayableRow>((a, b) =>
     supabase
       .from("office_shares")
@@ -94,7 +102,10 @@ export async function approvalsData(): Promise<InboxItem[]> {
 
 /** Transfers members reported on expenses the viewer paid, awaiting the viewer's confirmation. */
 export async function confirmationsData(): Promise<InboxItem[]> {
-  const { supabase, user } = await officeContext("/notifications");
+  const [{ supabase, user }] = await Promise.all([
+    officeContext("/notifications"),
+    settleOverduePayments(),
+  ]);
   const rows = await collectRows<PayableRow>((a, b) =>
     supabase
       .from("office_shares")

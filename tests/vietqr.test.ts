@@ -6,7 +6,7 @@ import {
   sanitizeMemo,
   shareVietQr,
 } from "../src/lib/vietqr";
-import { bankByBin, bankByName } from "../src/lib/vietqr-banks";
+import { bankByBin, bankByName, resolveBankBin } from "../src/lib/vietqr-banks";
 
 describe("VietQR", () => {
   it("computes CRC-16/CCITT-FALSE", () => {
@@ -83,6 +83,26 @@ describe("VietQR", () => {
     expect(bankByName(" mb  bank ")?.bin).toBe("970422");
     expect(bankByName("")).toBeUndefined();
   });
+
+  it("matches full bank names and common abbreviations", () => {
+    expect(bankByName("VCB")?.bin).toBe("970436");
+    expect(bankByName("mb")?.bin).toBe("970422");
+    expect(bankByName("TCB")?.bin).toBe("970407");
+    expect(bankByName("Ngân hàng TMCP Á Châu")?.bin).toBe("970416");
+    expect(bankByName("Ngan hang Ngoai thuong")).toBeUndefined();
+  });
+
+  it("resolves a BIN from the saved BIN first, then the bank name", () => {
+    expect(resolveBankBin({ bank_bin: "970422", bank_name: "VCB" })).toBe(
+      "970422",
+    );
+    expect(resolveBankBin({ bank_bin: null, bank_name: "Vietcombank" })).toBe(
+      "970436",
+    );
+    expect(resolveBankBin({ bank_bin: null, bank_name: "Ngân hàng X" })).toBe(
+      null,
+    );
+  });
 });
 
 describe("shareVietQr", () => {
@@ -99,6 +119,12 @@ describe("shareVietQr", () => {
       amount: "50000",
       memo: "Lan An trua",
     });
+  });
+  it("strips separators that banks print inside account numbers", () => {
+    for (const accountNumber of ["0011-0012-34", "0011.0012.34"])
+      expect(
+        parseVietQr(shareVietQr({ ...base, accountNumber }) || ""),
+      ).toMatchObject({ accountNumber: "0011001234" });
   });
   it("returns null without a BIN, outside VND or for a zero share", () => {
     expect(shareVietQr({ ...base, bin: null })).toBeNull();

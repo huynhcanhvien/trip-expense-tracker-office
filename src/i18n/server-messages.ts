@@ -8,6 +8,10 @@ const english: Record<string, string> = {
   "Thành viên đã báo chuyển tiền": "A member reported a transfer",
   "Khoản chuyển tiền đã được xác nhận": "A transfer was confirmed",
   "Khoản chuyển tiền chưa được xác nhận": "A transfer has not been confirmed",
+  "Khoản chuyển tiền đã được tự động xác nhận sau 48 giờ":
+    "A transfer was confirmed automatically after 48 hours",
+  "Khoản chuyển tiền của bạn đã được tự động xác nhận":
+    "Your transfer was confirmed automatically",
   "Có khoản chi cần bạn xác nhận": "An expense paid by you needs your approval",
   "Người trả tiền đã xác nhận khoản chi": "The payer approved your expense",
   "Người trả tiền đã từ chối khoản chi": "The payer rejected your expense",

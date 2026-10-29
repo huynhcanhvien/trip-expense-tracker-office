@@ -197,6 +197,9 @@
     "memberPaymentQr": "Mã QR thanh toán của {name}",
     "qrUnavailable": "Không tạo được QR cho số tiền này.",
     "addBankForQr": "Chọn ngân hàng trong hồ sơ để tạo mã QR thanh toán.",
+    "autoConfirmed": "Tự động xác nhận (48 giờ)",
+    "autoConfirmAt": "Tự động xác nhận lúc {time} nếu người ứng tiền không phản hồi trong {hours} giờ.",
+    "staticQrNoAmount": "Mã QR này không tự điền số tiền — hãy nhập {amount} khi chuyển.",
     "bankAfterApproval": "Thông tin ngân hàng sẽ hiện khi người trả tiền duyệt khoản chi.",
     "remindName": "Nhắc {name}"
   },

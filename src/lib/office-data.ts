@@ -52,6 +52,20 @@ export async function profilesFor(
     );
   return new Map(rows.map((p) => [p.id, p]));
 }
+/**
+ * Confirms transfers the payer left unanswered past the auto-confirm window
+ * before a page reads them, so the 48 hours hold between daily cron runs.
+ */
+export const settleOverduePayments = cache(
+  async (expenseId: string | null = null): Promise<void> => {
+    const { supabase } = await requireUser();
+    const { error } = await supabase.rpc("settle_overdue_payments", {
+      p_expense_id: expenseId,
+    });
+    // The daily cron is the backstop, so a failure here must not break the page.
+    if (error) console.error("Settling overdue payments failed");
+  },
+);
 export const groupsForUser = cache(async (): Promise<Group[]> => {
   const { supabase } = await requireUser();
   return collectRows<Group>((start, end) =>
@@ -171,6 +185,7 @@ export async function expenseData(id: string) {
   )
     return null;
   const { supabase, user } = await requireUser(`/expenses/${id}`);
+  await settleOverduePayments(id);
   const expense = checked(
     await supabase
       .from("office_expenses")

@@ -283,10 +283,35 @@ describe("cloud cleanup authorization", () => {
       failed: 1,
       recurring: 0,
       reminders: 0,
+      autoConfirmed: 0,
       pushed: 0,
     });
     expect(from).not.toHaveBeenCalled();
     expect(remove).toHaveBeenCalledWith(["original", "preview"]);
+  });
+  it("auto-confirms overdue transfers daily and reports its failure", async () => {
+    vi.stubEnv("CRON_SECRET", "test-secret");
+    const rpc = vi.fn(async (name: string) =>
+      name === "auto_confirm_payments"
+        ? { data: null, error: { message: "boom" } }
+        : name === "claim_cleanup_uploads" ||
+            name === "claim_push_notifications"
+          ? { data: [], error: null }
+          : { data: 2, error: null },
+    );
+    mocks.admin.mockReturnValue({ rpc });
+    const response = await cleanup(
+      new Request("https://office.example/api/cron/cleanup", {
+        headers: { Authorization: "Bearer test-secret" },
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      recurring: 2,
+      reminders: 2,
+      autoConfirmed: -1,
+    });
+    expect(rpc).toHaveBeenCalledWith("auto_confirm_payments", {});
   });
   it("runs recurring expenses and reminders daily and reports scheduler failures", async () => {
     vi.stubEnv("CRON_SECRET", "test-secret");

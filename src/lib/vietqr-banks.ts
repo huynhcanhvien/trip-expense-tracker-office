@@ -169,10 +169,38 @@ export const bankByBin = (
   bin: string | null | undefined,
 ): VietQrBank | undefined => (bin ? byBin.get(bin) : undefined);
 
-/** Matches the short name members type or pick, ignoring case and spacing. */
+/** Abbreviations members commonly type instead of the bank's short name. */
+const ALIASES: Readonly<Record<string, string>> = {
+  vcb: "970436",
+  ctg: "970415",
+  vietin: "970415",
+  bid: "970418",
+  mb: "970422",
+  tcb: "970407",
+  vpb: "970432",
+  tpb: "970423",
+  stb: "970403",
+  hdb: "970437",
+  eib: "970431",
+  lpb: "970449",
+  seab: "970440",
+};
+
+/** Matches the short name, full name or a common abbreviation, ignoring case and spacing. */
 export function bankByName(name: string): VietQrBank | undefined {
   const key = fold(name);
-  return key
-    ? VIETQR_BANKS.find((bank) => fold(bank.shortName) === key)
-    : undefined;
+  if (!key) return undefined;
+  return (
+    VIETQR_BANKS.find(
+      (bank) => fold(bank.shortName) === key || fold(bank.name) === key,
+    ) ?? bankByBin(ALIASES[key])
+  );
+}
+
+/** Profiles saved before BINs existed only have a bank name; derive the BIN from it. */
+export function resolveBankBin(bank: {
+  bank_bin: string | null;
+  bank_name: string;
+}): string | null {
+  return bank.bank_bin || bankByName(bank.bank_name)?.bin || null;
 }

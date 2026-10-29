@@ -61,6 +61,7 @@ export type Share = {
   payment_status: "pending" | "reported" | "confirmed" | "self";
   weight?: number | null;
   last_reminded_at?: string | null;
+  reported_at?: string | null;
 };
 export type ExpenseChange = {
   id: string;

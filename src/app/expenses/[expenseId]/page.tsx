@@ -18,6 +18,8 @@ import {
 } from "@/lib/office-actions";
 import type { BankAccount } from "@/lib/office-types";
 import { shareVietQr } from "@/lib/vietqr";
+import { resolveBankBin } from "@/lib/vietqr-banks";
+import { AUTO_CONFIRM_HOURS, autoConfirmAt } from "@/lib/payments";
 import { canRemind } from "@/lib/push";
 export default async function ExpensePage({
   params,
@@ -30,6 +32,7 @@ export default async function ExpensePage({
   const eventLabels: Record<string, string> = {
     report: t("transferReported"),
     confirm: t("confirmReceipt"),
+    auto_confirm: t("autoConfirmed"),
     reject: t("transferReportRejected"),
     cancel: t("cancelExpense"),
     create: t("createExpense"),
@@ -73,11 +76,12 @@ export default async function ExpensePage({
   const received = confirmed.reduce((sum, s) => sum.plus(s.amount), new Big(0));
   const reference = bank?.transfer_template || expense.description;
   const unpaid = required.filter((s) => s.payment_status !== "confirmed");
+  const bankBin = bank && resolveBankBin(bank);
   const qrFor = (amount: string) =>
     bank && expense.status === "active"
       ? shareVietQr({
           currency: group.currency,
-          bin: bank.bank_bin,
+          bin: bankBin,
           accountNumber: bank.account_number,
           amount,
           // The sender's name already shows on the bank transfer; keep the memo for the reference.
@@ -175,6 +179,20 @@ export default async function ExpensePage({
                     <p>
                       <Badge status={s.payment_status} />
                     </p>
+                    {expense.status === "active" &&
+                      s.payment_status === "reported" &&
+                      s.reported_at &&
+                      (isPayer || s.user_id === user.id) && (
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {t("autoConfirmAt", {
+                            hours: AUTO_CONFIRM_HOURS,
+                            time: format.dateTime(
+                              autoConfirmAt(s.reported_at),
+                              { dateStyle: "medium", timeStyle: "short" },
+                            ),
+                          })}
+                        </p>
+                      )}
                   </div>
                   <strong className="shrink-0 text-sm font-bold tabular-nums">
                     {money(s.amount, group.currency)}
@@ -358,11 +376,11 @@ export default async function ExpensePage({
                 {isPayer &&
                   unpaid.length > 0 &&
                   expense.status === "active" && (
-                    <details className="mt-5">
+                    <details className="mt-5" open>
                       <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-primary">
                         {t("memberQrCodes")}
                       </summary>
-                      {bank.bank_bin ? (
+                      {bankBin ? (
                         <ul className="mt-3 space-y-5">
                           {unpaid.map((s) => {
                             const payload = qrFor(s.amount);
@@ -394,17 +412,31 @@ export default async function ExpensePage({
                         </ul>
                       ) : (
                         <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                          {t("addBankForQr")}
+                          <Link
+                            href="/profile"
+                            className="font-semibold text-primary underline-offset-4 hover:underline"
+                          >
+                            {t("addBankForQr")}
+                          </Link>
                         </p>
                       )}
                     </details>
                   )}
                 {!myQr && bank.qr_upload_id && (
-                  <SavedImage
-                    className="mx-auto mt-5 max-h-72 rounded-xl"
-                    uploadId={bank.qr_upload_id}
-                    alt={t("bankQRCodeOfThePerson")}
-                  />
+                  <figure className="mt-5 space-y-2 text-center">
+                    <SavedImage
+                      className="mx-auto max-h-72 rounded-xl"
+                      uploadId={bank.qr_upload_id}
+                      alt={t("bankQRCodeOfThePerson")}
+                    />
+                    {myShare && (
+                      <figcaption className="text-xs leading-6 text-muted-foreground">
+                        {t("staticQrNoAmount", {
+                          amount: money(myShare.amount, group.currency),
+                        })}
+                      </figcaption>
+                    )}
+                  </figure>
                 )}
               </>
             ) : (
