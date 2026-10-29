@@ -82,6 +82,9 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
           <input
             name="accountNumber"
             inputMode="numeric"
+            // Placeholders like "XXXX" produce QR codes banks cannot look up.
+            pattern=".*[0-9].*"
+            title={t("accountNumberNeedsDigits")}
             value={accountNumber}
             onChange={(event) => setAccountNumber(event.target.value)}
             required

@@ -21,6 +21,8 @@ const english: Record<string, string> = {
   "Khoản chi đã bị hủy; kiểm tra đối soát":
     "An expense was cancelled; review reconciliation",
   "Vui lòng đăng nhập để tiếp tục.": "Please sign in to continue.",
+  "Số tài khoản phải là số tài khoản thật (có chữ số), không dùng ký tự che như XXXX.":
+    "Enter your real account number (with digits), not a placeholder like XXXX.",
   "Chỉ quản trị viên nhóm được thực hiện thao tác này.":
     "Only the group administrator can perform this action.",
   "Hãy nhập đúng tên nhóm để xác nhận xóa.":

@@ -3,6 +3,7 @@ import {
   buildVietQr,
   crc16,
   parseVietQr,
+  isPayableAccountNumber,
   sanitizeMemo,
   shareVietQr,
 } from "../src/lib/vietqr";
@@ -105,6 +106,17 @@ describe("VietQR", () => {
   });
 });
 
+describe("isPayableAccountNumber", () => {
+  it("accepts account numbers with digits, ignoring separators", () => {
+    for (const value of ["0011001234", "0011-001 234.5", "VQRQ12345"])
+      expect(isPayableAccountNumber(value)).toBe(true);
+  });
+  it("rejects placeholders, empty and over-long values", () => {
+    for (const value of ["XXXX", "", "  ", "abc-def", "1".repeat(20)])
+      expect(isPayableAccountNumber(value)).toBe(false);
+  });
+});
+
 describe("shareVietQr", () => {
   const base = {
     currency: "VND",
@@ -125,6 +137,12 @@ describe("shareVietQr", () => {
       expect(
         parseVietQr(shareVietQr({ ...base, accountNumber }) || ""),
       ).toMatchObject({ accountNumber: "0011001234" });
+  });
+  it("falls back (null) when the saved account number has no digits", () => {
+    // Members typed placeholders like "XXXX" to hide the number; a QR with it
+    // fails in banking apps, so the payer's static QR is shown instead.
+    expect(shareVietQr({ ...base, accountNumber: "XXXX" })).toBeNull();
+    expect(shareVietQr({ ...base, accountNumber: "- . -" })).toBeNull();
   });
   it("returns null without a BIN, outside VND or for a zero share", () => {
     expect(shareVietQr({ ...base, bin: null })).toBeNull();

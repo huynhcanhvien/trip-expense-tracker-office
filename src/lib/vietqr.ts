@@ -44,6 +44,19 @@ export function parseTlv(payload: string): Map<string, string> | null {
   return fields;
 }
 
+/** Banking apps often display account numbers grouped with spaces, dashes or dots. */
+const normalizeAccountNumber = (value: string) =>
+  value.replace(/[^0-9A-Za-z]/g, "");
+
+/**
+ * Whether a VietQR built from this account number can be paid. Placeholders
+ * without digits (e.g. "XXXX" typed to hide the number) fail in banking apps.
+ */
+export function isPayableAccountNumber(value: string): boolean {
+  const account = normalizeAccountNumber(value);
+  return /^[0-9A-Za-z]{1,19}$/.test(account) && /[0-9]/.test(account);
+}
+
 /** Bank-safe transfer memo: ASCII letters, digits and spaces only. */
 export function sanitizeMemo(memo: string): string {
   return memo
@@ -122,13 +135,17 @@ export function shareVietQr(input: {
   amount: string;
   memo: string;
 }): string | null {
-  if (input.currency !== "VND" || !input.bin) return null;
+  if (
+    input.currency !== "VND" ||
+    !input.bin ||
+    !isPayableAccountNumber(input.accountNumber)
+  )
+    return null;
   const amount = input.amount.replace(/\.0+$/, "");
   try {
     return buildVietQr({
       bin: input.bin,
-      // Banking apps often display account numbers grouped with spaces, dashes or dots.
-      accountNumber: input.accountNumber.replace(/[^0-9A-Za-z]/g, ""),
+      accountNumber: normalizeAccountNumber(input.accountNumber),
       amount,
       memo: input.memo,
     });
