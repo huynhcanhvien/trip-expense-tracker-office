@@ -46,6 +46,8 @@ yarn-error.log*
 
 # local-dev photo storage (plan §4)
 /public/uploads/*
+# Copied from node_modules by scripts/copy-zxing-wasm.mjs
+/public/vendor/
 !/public/uploads/.gitkeep
 
 # playwright

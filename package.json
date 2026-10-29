@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-zxing-wasm.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-zxing-wasm.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -42,7 +44,8 @@
     "tailwind-merge": "^3.7.0",
     "tus-js-client": "^4.3.1",
     "web-push": "^3.6.7",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zxing-wasm": "3.1.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -67,5 +70,5 @@
     "typescript": "^5",
     "vitest": "^4.1.9"
   },
-  "description": "Office group expenses \u2014 Supabase Auth, PostgreSQL, private images and Groq OCR"
+  "description": "Office group expenses — Supabase Auth, PostgreSQL, private images and Groq OCR"
 }

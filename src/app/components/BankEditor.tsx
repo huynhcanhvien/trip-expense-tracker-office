@@ -12,8 +12,8 @@ import {
   resolveBankBin,
   VIETQR_BANKS,
 } from "@/lib/vietqr-banks";
-import { decodeVietQrImage } from "@/lib/qr-decode";
-type QrNotice = "" | "filled" | "unknownBank" | "notFound";
+import { readBankQrImage } from "@/lib/qr-decode";
+type QrNotice = "" | "filled" | "unknownBank" | "notVietQr" | "notFound";
 export default function BankEditor({ bank }: { bank: BankAccount | null }) {
   const t = useTranslations("bank");
   const [qr, setQr] = useState(bank?.qr_upload_id || "");
@@ -35,8 +35,11 @@ export default function BankEditor({ bank }: { bank: BankAccount | null }) {
   };
   const readQr = useCallback(async (image: Blob) => {
     setQrNotice("");
-    const account = await decodeVietQrImage(image).catch(() => null);
-    if (!account) return setQrNotice("notFound");
+    const read = await readBankQrImage(image).catch(
+      () => ({ status: "notFound" }) as const,
+    );
+    if (read.status !== "found") return setQrNotice(read.status);
+    const { account } = read;
     const known = bankByBin(account.bin);
     setBankBin(account.bin);
     if (known) setBankName(known.shortName);

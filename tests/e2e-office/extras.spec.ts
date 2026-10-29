@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import QRCode from "qrcode";
 import { crc16 } from "../../src/lib/vietqr";
-import { stylizedQrScreenshot } from "./stylized-qr";
+import { lowContrastQr, qrSheet, stylizedQrScreenshot } from "./stylized-qr";
 
 const configured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY,
@@ -436,5 +436,42 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
     await expect(page.getByLabel("Số tài khoản", { exact: true })).toHaveValue(
       "12345678901234",
     );
+  });
+
+  test("reads faded QRs, picks the bank QR next to a wallet QR and explains wallet-only QRs", async ({
+    browser,
+  }) => {
+    const page = await signedIn(browser, 2);
+    const body =
+      "00020101021138580010A000000727012800069704150114123456789012340208QRIBFTTA53037045802VN6304";
+    const bankQr = body + crc16(body);
+    const walletQr = "2|99|0901234567|NGUYEN VAN A||0|0|0";
+    const upload = async (name: string, buffer: Buffer) => {
+      await page.goto("/profile");
+      await page.waitForLoadState("networkidle");
+      await page
+        .locator('input[type="file"]')
+        .last()
+        .setInputFiles({ name, mimeType: "image/jpeg", buffer });
+      // Leaving mid-upload would cancel requests and log server errors.
+      await expect(page.getByText("Ảnh đã tải xong.")).toBeVisible();
+    };
+    const filled = page.getByText(
+      "Đã điền thông tin từ mã QR. Vui lòng kiểm tra trước khi lưu.",
+    );
+    const account = page.getByLabel("Số tài khoản", { exact: true });
+
+    await upload("faded.jpg", await lowContrastQr(bankQr));
+    await expect(filled).toBeVisible();
+    await expect(account).toHaveValue("12345678901234");
+
+    await upload("wallet-and-bank.jpg", await qrSheet([walletQr, bankQr]));
+    await expect(filled).toBeVisible();
+    await expect(account).toHaveValue("12345678901234");
+
+    await upload("wallet.jpg", await qrSheet([walletQr]));
+    await expect(
+      page.getByText(/không phải mã chuyển khoản ngân hàng/),
+    ).toBeVisible();
   });
 });

@@ -394,6 +394,7 @@
     "qrNotice": {
       "filled": "Đã điền thông tin từ mã QR. Vui lòng kiểm tra trước khi lưu.",
       "unknownBank": "Đã điền số tài khoản từ mã QR nhưng chưa nhận ra ngân hàng. Hãy nhập tên ngân hàng.",
+      "notVietQr": "Mã QR trong ảnh không phải mã chuyển khoản ngân hàng (VietQR), ví dụ mã ví điện tử. Hãy dùng QR nhận tiền của ngân hàng hoặc nhập thông tin thủ công.",
       "notFound": "Không đọc được mã VietQR từ ảnh này. Hãy nhập thông tin thủ công."
     }
   },
