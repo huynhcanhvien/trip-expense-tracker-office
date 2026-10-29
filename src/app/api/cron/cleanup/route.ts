@@ -15,9 +15,11 @@ async function dailyJobs(admin: ReturnType<typeof adminSupabase>) {
   }).format(new Date());
   const recurring = await admin.rpc("run_recurring", { p_today: today });
   const reminders = await admin.rpc("auto_remind_payments", {});
+  const autoConfirmed = await admin.rpc("auto_confirm_payments", {});
   return {
     recurring: recurring.error ? -1 : Number(recurring.data),
     reminders: reminders.error ? -1 : Number(reminders.data),
+    autoConfirmed: autoConfirmed.error ? -1 : Number(autoConfirmed.data),
   };
 }
 
@@ -68,7 +70,7 @@ export async function GET(request: Request) {
       pushed += sent;
       if (!claimed) break;
     }
-    const scheduledFailed = daily.recurring < 0 || daily.reminders < 0;
+    const scheduledFailed = Object.values(daily).some((count) => count < 0);
     return NextResponse.json(
       { removed, failed, ...daily, pushed },
       {

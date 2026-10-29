@@ -1,4 +1,9 @@
-import { officeContext, groupsForUser, collectRows } from "./office-data";
+import {
+  officeContext,
+  groupsForUser,
+  collectRows,
+  settleOverduePayments,
+} from "./office-data";
 import { calculateStats } from "./office-stats";
 import type { Expense, Share } from "./office-types";
 
@@ -7,6 +12,7 @@ export async function currentBalances() {
   const [{ supabase, user }, groups] = await Promise.all([
     officeContext(),
     groupsForUser(),
+    settleOverduePayments(),
   ]);
   const expenses: Expense[] = [];
   const shares: Share[] = [];

@@ -326,4 +326,77 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
       creatorPage.getByText("Đã dừng", { exact: true }),
     ).toBeVisible();
   });
+
+  test("QR from a bank name without BIN, then auto-confirm after 48 hours", async ({
+    browser,
+  }) => {
+    const [, payer, debtor] = people;
+    // A profile saved before BINs existed: only the bank's abbreviation.
+    const saved = await admin.from("bank_profiles").upsert({
+      user_id: payer.id,
+      bank_name: "VCB",
+      bank_bin: null,
+      account_number: "0011-0012-34567",
+      account_holder: "NGUYEN VAN A",
+      transfer_template: "",
+      qr_upload_id: null,
+    });
+    if (saved.error) throw saved.error;
+    const payerClient = await userClient(1);
+    const created = await payerClient.rpc("save_expense", {
+      p_expense_id: null,
+      p_group_id: groupId,
+      p_description: "Cà phê tự xác nhận",
+      p_amount: "200000",
+      p_expense_date: "2026-10-29",
+      p_split_mode: "even",
+      p_shares: [{ userId: payer.id }, { userId: debtor.id }],
+      p_payer_id: payer.id,
+      p_category: "food",
+    });
+    if (created.error) throw created.error;
+    const expenseId = created.data as string;
+
+    const debtorPage = await signedIn(browser, 2);
+    await debtorPage.goto(`/expenses/${expenseId}`);
+    await expect(
+      debtorPage.getByRole("img", {
+        name: "Mã QR thanh toán phần của bạn: 100.000 ₫",
+      }),
+    ).toBeVisible();
+
+    await debtorPage
+      .getByRole("button", { name: "Tôi đã chuyển tiền", exact: true })
+      .click();
+    await expect(debtorPage.getByText(/Tự động xác nhận lúc/)).toBeVisible();
+
+    // The payer never answers; pretend the report is 49 hours old.
+    const backdated = await admin
+      .from("office_shares")
+      .update({
+        reported_at: new Date(Date.now() - 49 * 3_600_000).toISOString(),
+      })
+      .eq("expense_id", expenseId)
+      .eq("user_id", debtor.id);
+    if (backdated.error) throw backdated.error;
+    await debtorPage.reload();
+    await expect(
+      debtorPage.getByText("Tự động xác nhận (48 giờ)").first(),
+    ).toBeVisible();
+    const { data: share } = await admin
+      .from("office_shares")
+      .select("payment_status")
+      .eq("expense_id", expenseId)
+      .eq("user_id", debtor.id)
+      .single();
+    expect(share?.payment_status).toBe("confirmed");
+    const { data: notes } = await admin
+      .from("notifications")
+      .select("title")
+      .eq("expense_id", expenseId)
+      .eq("user_id", payer.id);
+    expect(notes?.map((n) => n.title)).toContain(
+      "Khoản chuyển tiền đã được tự động xác nhận sau 48 giờ",
+    );
+  });
 });

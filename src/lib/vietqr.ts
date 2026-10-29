@@ -127,7 +127,8 @@ export function shareVietQr(input: {
   try {
     return buildVietQr({
       bin: input.bin,
-      accountNumber: input.accountNumber.replace(/\s+/g, ""),
+      // Banking apps often display account numbers grouped with spaces, dashes or dots.
+      accountNumber: input.accountNumber.replace(/[^0-9A-Za-z]/g, ""),
       amount,
       memo: input.memo,
     });
