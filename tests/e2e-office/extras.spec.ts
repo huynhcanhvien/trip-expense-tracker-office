@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import QRCode from "qrcode";
 import { crc16 } from "../../src/lib/vietqr";
+import { stylizedQrScreenshot } from "./stylized-qr";
 
 const configured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY,
@@ -404,6 +405,36 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
       .eq("user_id", payer.id);
     expect(notes?.map((n) => n.title)).toContain(
       "Khoản chuyển tiền đã được tự động xác nhận sau 48 giờ",
+    );
+  });
+
+  test("reads a bank-app QR drawn with round dots on upload", async ({
+    browser,
+  }) => {
+    const page = await signedIn(browser, 2);
+    await page.goto("/profile");
+    await page.waitForLoadState("networkidle");
+    // VietinBank screenshots draw modules as dots and finders as rings.
+    const body =
+      "00020101021138580010A000000727012800069704150114123456789012340208QRIBFTTA53037045802VN6304";
+    await page
+      .locator('input[type="file"]')
+      .last()
+      .setInputFiles({
+        name: "vietinbank.jpg",
+        mimeType: "image/jpeg",
+        buffer: await stylizedQrScreenshot(body + crc16(body)),
+      });
+    await expect(
+      page.getByText(
+        "Đã điền thông tin từ mã QR. Vui lòng kiểm tra trước khi lưu.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByLabel("Ngân hàng", { exact: true })).toHaveValue(
+      "VietinBank",
+    );
+    await expect(page.getByLabel("Số tài khoản", { exact: true })).toHaveValue(
+      "12345678901234",
     );
   });
 });
