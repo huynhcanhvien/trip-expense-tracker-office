@@ -137,6 +137,13 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
     await payerPage.goto("/profile");
     // File inputs only react once the page has hydrated.
     await payerPage.waitForLoadState("networkidle");
+    // Members may type first (even a placeholder); the QR then corrects the
+    // bank and account number but keeps the typed holder name, which most
+    // bank QRs do not carry.
+    await payerPage.getByLabel("Số tài khoản", { exact: true }).fill("XXXX");
+    await payerPage
+      .getByLabel("Tên chủ tài khoản", { exact: true })
+      .fill("NGUOI TRA");
     // A static VietQR (no amount), like the ones banks print for an account.
     const body =
       "00020101021138570010A00000072701270006970436011300110012345670208QRIBFTTA53037045802VN6304";
@@ -160,9 +167,9 @@ test.describe("payer approval, VietQR, reminders, categories and recurring", () 
     await expect(
       payerPage.getByLabel("Số tài khoản", { exact: true }),
     ).toHaveValue("0011001234567");
-    await payerPage
-      .getByLabel("Tên chủ tài khoản", { exact: true })
-      .fill("NGUOI TRA");
+    await expect(
+      payerPage.getByLabel("Tên chủ tài khoản", { exact: true }),
+    ).toHaveValue("NGUOI TRA");
     await expect(payerPage.getByText("Ảnh đã tải xong.")).toBeVisible();
     await payerPage
       .getByRole("button", { name: "Lưu ngân hàng", exact: true })

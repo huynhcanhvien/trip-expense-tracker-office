@@ -385,6 +385,7 @@
     "accountHolderName": "Account holder name",
     "defaultTransferReference": "Default transfer reference",
     "forExampleNguyenVanARepayment": "For example: Nguyen Van A repayment",
+    "accountNumberNeedsDigits": "Enter your real account number (with digits). Payment QR codes use exactly this number.",
     "bankQRCode": "Bank QR code",
     "yourBankQRCode": "Your bank QR code",
     "removeQR": "Remove QR",

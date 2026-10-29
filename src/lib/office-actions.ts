@@ -10,6 +10,8 @@ const errorMessage = (error: { message: string }) => {
   const message = error.message;
   const translations: Record<string, string> = {
     "Authentication required": "Vui lòng đăng nhập để tiếp tục.",
+    "Invalid account number":
+      "Số tài khoản phải là số tài khoản thật (có chữ số), không dùng ký tự che như XXXX.",
     "Group owner required":
       "Chỉ quản trị viên nhóm được thực hiện thao tác này.",
     "Group name confirmation required":

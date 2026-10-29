@@ -385,6 +385,7 @@
     "accountHolderName": "Tên chủ tài khoản",
     "defaultTransferReference": "Nội dung chuyển khoản mặc định",
     "forExampleNguyenVanARepayment": "Ví dụ: Nguyen Van A thanh toan",
+    "accountNumberNeedsDigits": "Nhập số tài khoản thật (có chữ số). Mã QR thanh toán dùng đúng số này.",
     "bankQRCode": "QR ngân hàng",
     "yourBankQRCode": "QR ngân hàng của bạn",
     "removeQR": "Gỡ QR",

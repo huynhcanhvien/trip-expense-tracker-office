@@ -403,6 +403,10 @@ describe("Supabase office migration: actual PostgreSQL functions and RLS", () =>
     await expect(
       rpc(outsider, "save_bank_profile", ["VCB", "123456", "X", "", qr.id]),
     ).rejects.toThrow(/Invalid QR/i);
+    for (const placeholder of ["XXXX", "  ", "abc-def"])
+      await expect(
+        rpc(owner, "save_bank_profile", ["VCB", placeholder, "A", "", null]),
+      ).rejects.toThrow(/Invalid account number/i);
     await rpc(owner, "save_bank_profile", [
       "VCB",
       "123456",
