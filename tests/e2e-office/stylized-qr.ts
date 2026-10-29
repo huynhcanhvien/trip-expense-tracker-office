@@ -54,3 +54,29 @@ export async function stylizedQrScreenshot(payload: string): Promise<Buffer> {
     .jpeg({ quality: 85 })
     .toBuffer();
 }
+
+/** A faded screenshot: dark modules barely darker than the background. */
+export async function lowContrastQr(payload: string): Promise<Buffer> {
+  return sharp(await QRCode.toBuffer(payload, { width: 600, margin: 4 }))
+    .linear(0.12, 200)
+    .jpeg()
+    .toBuffer();
+}
+
+/** One image holding several codes side by side, e.g. a wallet QR and a bank QR. */
+export async function qrSheet(payloads: string[]): Promise<Buffer> {
+  const codes = await Promise.all(
+    payloads.map((payload) => QRCode.toBuffer(payload, { width: 600 })),
+  );
+  return sharp({
+    create: {
+      width: 640 * codes.length,
+      height: 700,
+      channels: 3,
+      background: "#ffffff",
+    },
+  })
+    .composite(codes.map((input, i) => ({ input, left: i * 640, top: 50 })))
+    .jpeg()
+    .toBuffer();
+}

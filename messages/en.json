@@ -394,6 +394,7 @@
     "qrNotice": {
       "filled": "Bank details filled from your QR. Please review before saving.",
       "unknownBank": "Account filled from your QR, but the bank isn't in our list. Type the bank name.",
+      "notVietQr": "The QR in this image is not a bank transfer code (VietQR), e.g. an e-wallet code. Use your bank's receiving QR or enter the details manually.",
       "notFound": "Couldn't read a VietQR code from this image. Enter the details manually."
     }
   },
