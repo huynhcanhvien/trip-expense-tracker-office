@@ -15,6 +15,8 @@
     "migrate": "supabase db push",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
+    "db:seed": "node scripts/seed-local.mjs",
+    "dev:local": "node scripts/copy-zxing-wasm.mjs && node scripts/dev-local.mjs",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check src/app src/i18n src/lib/supabase src/lib/office-*.ts src/proxy.ts messages tests/i18n.test.ts tests/server-messages.test.ts tests/e2e-office scripts/audit-ui.mjs scripts/browser.mjs playwright.config.ts next.config.ts",
     "e2e:prepare": "node scripts/prepare-e2e.mjs",

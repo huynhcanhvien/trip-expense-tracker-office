@@ -58,6 +58,9 @@ const errorMessage = (error: { message: string }) => {
       "Số phần của mỗi người phải là số nguyên từ 1 đến 100.",
     "Reminder sent recently": "Bạn vừa nhắc khoản này. Hãy thử lại sau.",
     "No payable share": "Khoản này không còn cần trả.",
+    "Payment batch not found": "Không tìm thấy đợt trả này.",
+    "Payment batch is out of date":
+      "Danh sách khoản cần trả vừa thay đổi. Hãy tải lại trang để lấy mã QR mới.",
     "Invalid cadence": "Chu kỳ không hợp lệ.",
     "Start date must not be in the past": "Ngày bắt đầu không được ở quá khứ.",
     "Description required": "Hãy nhập mô tả.",
@@ -232,6 +235,20 @@ export async function paymentAction(
   revalidatePath("/statistics");
   revalidatePath("/notifications");
   return { success: "Đã cập nhật trạng thái thanh toán." };
+}
+export async function reportPaymentBatch(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  const { error } = await rpc("report_payment_batch", {
+    p_batch_id: text(f, "batchId"),
+  });
+  if (error) return { error };
+  revalidatePath("/");
+  revalidatePath("/pay");
+  revalidatePath("/statistics");
+  revalidatePath("/notifications");
+  return { success: "Đã báo chuyển tiền cho tất cả các khoản." };
 }
 export async function approveExpense(
   _: OfficeState,

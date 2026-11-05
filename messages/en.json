@@ -108,7 +108,8 @@
     "balanceDescription": "What you still owe and are owed, separated by currency.",
     "toPay": "Still to pay",
     "toReceive": "Still to receive",
-    "noBalances": "No payments to track yet. Start with a group and an expense."
+    "noBalances": "No payments to track yet. Start with a group and an expense.",
+    "payNow": "Pay"
   },
   "group": {
     "yourGroups": "← Your groups",
@@ -277,7 +278,8 @@
     "payTo": "Pay {name}",
     "addedBy": "Added by {name}",
     "nothingToConfirm": "No transfers are waiting for your confirmation.",
-    "reportedBy": "Reported by {name}"
+    "reportedBy": "Reported by {name}",
+    "viewPaymentBatch": "View the expenses in this transfer →"
   },
   "profile": {
     "yourProfile": "Your profile",
@@ -567,5 +569,41 @@
     "enable": "Turn on notifications",
     "disable": "Turn off notifications",
     "failed": "Couldn't change notification settings. Try again."
+  },
+  "pay": {
+    "title": "Pay",
+    "eyebrow": "One transfer per person",
+    "description": "Each person you owe gets one QR code for the full amount. The transfer memo is a batch code they can match against this list.",
+    "back": "← Home",
+    "payTo": "Pay {name}",
+    "itemCount": "{count, plural, one {# expense} other {# expenses}}",
+    "total": "Total to pay",
+    "expenses": "Expenses in this transfer",
+    "scanToPay": "Scan with your banking app to pay {amount}",
+    "qrLabel": "QR code to pay {amount} to {name}",
+    "qrUnavailable": "A QR code is not available for this transfer. Transfer manually with the memo below.",
+    "noBank": "{name} has not added a bank account yet. Ask them how to get paid.",
+    "bank": "Bank",
+    "accountNumber": "Account number",
+    "accountHolder": "Account holder",
+    "memo": "Transfer memo",
+    "reported": "I have transferred",
+    "reportHint": "Only press this after sending the full {amount}. They confirm each expense; without a reply it is confirmed automatically after {hours} hours.",
+    "nothingToPay": "You have nothing left to pay.",
+    "viewBatch": "View transfer {code}",
+    "batchTitle": "Transfer {code}",
+    "batchDescription": "{member} pays {receiver} · {date}",
+    "batchMissing": "This transfer does not exist or you cannot view it.",
+    "status": {
+      "open": "Not reported yet",
+      "reported": "Reported",
+      "superseded": "Replaced by a new code"
+    },
+    "copyList": "Copy list",
+    "awaitingTitle": "Reported, waiting for confirmation",
+    "summary": "{code}: {count, plural, one {# expense} other {# expenses}} from {from} to {to}",
+    "summarySameDay": "{code}: {count, plural, one {# expense} other {# expenses}} on {date}",
+    "memoHint": "The QR memo is short for: batch code, number of expenses, oldest and newest date (day/month).",
+    "batchEyebrow": "Match a transfer"
   }
 }

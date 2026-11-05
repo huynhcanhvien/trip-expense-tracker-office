@@ -109,3 +109,21 @@ export type BankAccount = {
   bank_bin: string | null;
 };
 export type OfficeState = { error?: string; success?: string };
+export type PaymentBatch = {
+  id: string;
+  code: string;
+  memberId: string;
+  receiverId: string;
+  currency: string;
+  amount: string;
+  status: "open" | "reported" | "superseded";
+  createdAt: string;
+  reportedAt: string | null;
+};
+export type PaymentBatchItem = {
+  expenseId: string;
+  description: string;
+  expenseDate: string;
+  groupName: string;
+  amount: string;
+};

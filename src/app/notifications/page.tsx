@@ -113,7 +113,7 @@ export default async function NotificationsPage({
   const rows = checked(
     await supabase
       .from("notifications")
-      .select("*")
+      .select("*,batch:payment_batches(code)")
       .order("created_at", { ascending: false })
       .limit(100),
   ) as {
@@ -121,6 +121,7 @@ export default async function NotificationsPage({
     title: string;
     group_id: string | null;
     expense_id: string | null;
+    batch: { code: string } | null;
     created_at: string;
     read_at: string | null;
   }[];
@@ -159,16 +160,22 @@ export default async function NotificationsPage({
                       timeStyle: "short",
                     })}
                   </p>
-                  {(r.expense_id || r.group_id) && (
-                    <Link
-                      href={
-                        r.expense_id
-                          ? `/expenses/${r.expense_id}`
-                          : `/groups/${r.group_id}`
-                      }
-                    >
-                      {t("viewDetails")}
+                  {r.batch ? (
+                    <Link href={`/pay/${r.batch.code}`}>
+                      {t("viewPaymentBatch")}
                     </Link>
+                  ) : (
+                    (r.expense_id || r.group_id) && (
+                      <Link
+                        href={
+                          r.expense_id
+                            ? `/expenses/${r.expense_id}`
+                            : `/groups/${r.group_id}`
+                        }
+                      >
+                        {t("viewDetails")}
+                      </Link>
+                    )
                   )}
                 </div>
                 {!r.read_at && (
