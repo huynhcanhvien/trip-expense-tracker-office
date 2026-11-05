@@ -108,7 +108,8 @@
     "balanceDescription": "Các khoản còn phải trả và phải thu, theo từng tiền tệ.",
     "toPay": "Còn phải trả",
     "toReceive": "Còn phải thu",
-    "noBalances": "Chưa có khoản cần thanh toán. Bắt đầu từ một nhóm và một khoản chi."
+    "noBalances": "Chưa có khoản cần thanh toán. Bắt đầu từ một nhóm và một khoản chi.",
+    "payNow": "Trả tiền"
   },
   "group": {
     "yourGroups": "← Nhóm của bạn",
@@ -277,7 +278,8 @@
     "payTo": "Trả cho {name}",
     "addedBy": "Do {name} tạo",
     "nothingToConfirm": "Không có khoản chuyển nào chờ bạn xác nhận.",
-    "reportedBy": "{name} báo đã chuyển"
+    "reportedBy": "{name} báo đã chuyển",
+    "viewPaymentBatch": "Xem các khoản trong đợt trả →"
   },
   "profile": {
     "yourProfile": "Hồ sơ của bạn",
@@ -567,5 +569,41 @@
     "enable": "Bật thông báo",
     "disable": "Tắt thông báo",
     "failed": "Không đổi được cài đặt thông báo. Hãy thử lại."
+  },
+  "pay": {
+    "title": "Trả tiền",
+    "eyebrow": "Trả gộp theo người nhận",
+    "description": "Mỗi người nhận có một mã QR cho tổng số tiền bạn còn nợ. Nội dung chuyển khoản là mã đợt trả để người nhận đối chiếu.",
+    "back": "← Trang chủ",
+    "payTo": "Trả cho {name}",
+    "itemCount": "{count, plural, other {# khoản}}",
+    "total": "Tổng cần trả",
+    "expenses": "Các khoản trong đợt trả",
+    "scanToPay": "Quét bằng ứng dụng ngân hàng để trả {amount}",
+    "qrLabel": "Mã QR trả {amount} cho {name}",
+    "qrUnavailable": "Không tạo được QR cho đợt trả này. Hãy chuyển khoản thủ công với nội dung bên dưới.",
+    "noBank": "{name} chưa thêm tài khoản ngân hàng. Hãy hỏi trực tiếp cách nhận tiền.",
+    "bank": "Ngân hàng",
+    "accountNumber": "Số tài khoản",
+    "accountHolder": "Chủ tài khoản",
+    "memo": "Nội dung chuyển khoản",
+    "reported": "Tôi đã chuyển",
+    "reportHint": "Chỉ bấm sau khi đã chuyển đủ {amount}. Người nhận sẽ xác nhận từng khoản; nếu họ không phản hồi, hệ thống tự xác nhận sau {hours} giờ.",
+    "nothingToPay": "Bạn không còn khoản nào cần trả.",
+    "viewBatch": "Xem đợt trả {code}",
+    "batchTitle": "Đợt trả {code}",
+    "batchDescription": "{member} trả {receiver} · {date}",
+    "batchMissing": "Không tìm thấy đợt trả này hoặc bạn không có quyền xem.",
+    "status": {
+      "open": "Chưa báo chuyển",
+      "reported": "Đã báo chuyển",
+      "superseded": "Đã thay bằng mã mới"
+    },
+    "copyList": "Sao chép danh sách",
+    "awaitingTitle": "Đã báo chuyển, chờ người nhận xác nhận",
+    "summary": "{code}: {count} đơn từ {from} tới {to}",
+    "summarySameDay": "{code}: {count} đơn ở {date}",
+    "memoHint": "Nội dung trong QR viết tắt: mã đợt trả, số đơn, ngày cũ nhất và mới nhất (ngày/tháng).",
+    "batchEyebrow": "Đối chiếu chuyển khoản"
   }
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Big from "big.js";
 import {
   ArrowRight,
   Bell,
+  HandCoins,
   Plus,
   ShieldCheck,
   Users,
@@ -73,11 +75,22 @@ export default async function Home() {
                   {b.currency}
                 </span>
                 <dl className="mt-3 space-y-3">
-                  <div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
                     <dt className="text-xs">{t("toPay")}</dt>
-                    <dd className="tabular mt-1 text-xl font-bold">
+                    <dd className="tabular col-start-1 mt-1 text-xl font-bold">
                       {money(b.toPay, b.currency)}
                     </dd>
+                    {new Big(b.toPay).gt(0) && (
+                      <dd className="col-start-2 row-span-2 row-start-1">
+                        <Link
+                          href="/pay"
+                          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary-foreground px-4 text-sm font-semibold text-primary shadow-soft transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground active:translate-y-0"
+                        >
+                          <HandCoins size={18} aria-hidden />
+                          {t("payNow")}
+                        </Link>
+                      </dd>
+                    )}
                   </div>
                   <div>
                     <dt className="text-xs">{t("toReceive")}</dt>

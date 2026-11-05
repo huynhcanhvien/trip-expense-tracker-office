@@ -8,6 +8,7 @@ import {
   shareVietQr,
 } from "../src/lib/vietqr";
 import { bankByBin, bankByName, resolveBankBin } from "../src/lib/vietqr-banks";
+import { batchMemo, itemList } from "../src/lib/payment-batch";
 
 describe("VietQR", () => {
   it("computes CRC-16/CCITT-FALSE", () => {
@@ -148,5 +149,64 @@ describe("shareVietQr", () => {
     expect(shareVietQr({ ...base, bin: null })).toBeNull();
     expect(shareVietQr({ ...base, currency: "USD" })).toBeNull();
     expect(shareVietQr({ ...base, amount: "0" })).toBeNull();
+  });
+});
+
+describe("payment batch QR", () => {
+  const item = (expenseDate: string) => ({
+    expenseId: "a1b2c3d4-0000-4000-8000-000000000001",
+    description: "Ăn trưa",
+    expenseDate,
+    groupName: "Nhóm",
+    amount: "1",
+  });
+  it("puts the code, count and oldest to newest expense dates in the memo", () => {
+    const memo = batchMemo("4F7K2Q", [
+      item("2026-11-08"),
+      item("2026-11-05"),
+      item("2026-11-06"),
+    ]);
+    expect(memo).toBe("4F7K2Q 3 don 0511 0811");
+    const payload = shareVietQr({
+      currency: "VND",
+      bin: "970436",
+      accountNumber: "0123 456 789",
+      amount: "350000.00",
+      memo,
+    });
+    expect(parseVietQr(payload!)).toMatchObject({ amount: "350000", memo });
+  });
+  it("shows one date when every expense is on the same day", () => {
+    expect(batchMemo("4F7K2Q", [item("2026-11-05"), item("2026-11-05")])).toBe(
+      "4F7K2Q 2 don 0511",
+    );
+  });
+  it("stays within the bank memo limit for large batches", () => {
+    const many = Array.from({ length: 999 }, (_, i) =>
+      item(i ? "2026-12-31" : "2026-01-01"),
+    );
+    const memo = batchMemo("4F7K2Q", many);
+    expect(memo).toBe("4F7K2Q 999 don 0101 3112");
+    expect(sanitizeMemo(memo)).toBe(memo);
+  });
+  it("lists expenses as short id and description lines", () => {
+    expect(
+      itemList([
+        {
+          expenseId: "a1b2c3d4-0000-4000-8000-000000000001",
+          description: "Ăn trưa",
+          expenseDate: "2026-11-05",
+          groupName: "Nhóm",
+          amount: "1",
+        },
+        {
+          expenseId: "e5f6a7b8-0000-4000-8000-000000000002",
+          description: "Taxi",
+          expenseDate: "2026-11-05",
+          groupName: "Nhóm",
+          amount: "1",
+        },
+      ]),
+    ).toBe("a1b2c3d4:Ăn trưa\ne5f6a7b8:Taxi");
   });
 });

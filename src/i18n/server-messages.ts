@@ -6,6 +6,8 @@ const english: Record<string, string> = {
   "Bạn có khoản chia tiền mới": "You have a new expense share",
   "Khoản chia tiền đã được cập nhật": "An expense share was updated",
   "Thành viên đã báo chuyển tiền": "A member reported a transfer",
+  "Thành viên đã báo chuyển tiền cho nhiều khoản":
+    "A member reported one transfer for several expenses",
   "Khoản chuyển tiền đã được xác nhận": "A transfer was confirmed",
   "Khoản chuyển tiền chưa được xác nhận": "A transfer has not been confirmed",
   "Khoản chuyển tiền đã được tự động xác nhận sau 48 giờ":
@@ -79,6 +81,9 @@ const english: Record<string, string> = {
   "Bạn vừa nhắc khoản này. Hãy thử lại sau.":
     "You reminded this recently. Try again later.",
   "Khoản này không còn cần trả.": "This share no longer needs paying.",
+  "Không tìm thấy đợt trả này.": "This payment batch was not found.",
+  "Danh sách khoản cần trả vừa thay đổi. Hãy tải lại trang để lấy mã QR mới.":
+    "What you owe just changed. Reload the page for a new QR code.",
   "Chu kỳ không hợp lệ.": "Invalid schedule.",
   "Ngày bắt đầu không được ở quá khứ.": "The start date can't be in the past.",
   "Hãy nhập mô tả.": "Enter a description.",
@@ -113,6 +118,8 @@ const english: Record<string, string> = {
   "Đã xử lý yêu cầu.": "Request processed.",
   "Hãy chọn người chia tiền.": "Select the participants.",
   "Đã cập nhật trạng thái thanh toán.": "Payment status updated.",
+  "Đã báo chuyển tiền cho tất cả các khoản.":
+    "Transfer reported for all expenses.",
   "Đã hủy expense và giữ lịch sử đối soát.":
     "Expense cancelled. The reconciliation history has been preserved.",
   "Đã lưu tài khoản ngân hàng.": "Bank account saved.",
