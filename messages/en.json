@@ -142,7 +142,12 @@
     "confirmLeave": "Confirm leaving group",
     "leaveConfirmation": "I want to leave this group",
     "groupDetails": "Group members and management",
-    "recurring": "Recurring"
+    "recurring": "Recurring",
+    "removeMember": "Remove",
+    "removeMemberNamed": "Remove {name} from the group",
+    "removeWarning": "You can remove a member only when they have no unconfirmed payables or receivables and no expense awaits approval. Expense history is kept; they lose access and must request to join again.",
+    "removeConfirmation": "I want to remove {name} from the group",
+    "confirmRemove": "Confirm removal"
   },
   "newExpense": {
     "createExpense": "Create expense",

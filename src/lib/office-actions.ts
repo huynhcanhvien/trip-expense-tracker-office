@@ -50,6 +50,15 @@ const errorMessage = (error: { message: string }) => {
       "Expense vừa được sửa. Hãy tải lại trang và kiểm tra trước khi duyệt.",
     "Active expense creator required":
       "Không thể sửa expense này. Expense đã được người trả duyệt nên chỉ người trả được sửa.",
+    "Group owner cannot be removed":
+      "Quản trị viên không thể tự xóa mình khỏi nhóm.",
+    "Member not found": "Người này không còn là thành viên nhóm.",
+    "Member has outstanding payments":
+      "Thành viên này còn khoản phải trả chưa được xác nhận trong nhóm; hãy xử lý trước khi xóa.",
+    "Member has outstanding receivables":
+      "Người khác còn nợ thành viên này trong nhóm; hãy thanh toán và xác nhận trước khi xóa.",
+    "Member has pending expense approvals":
+      "Còn expense đang chờ duyệt liên quan đến thành viên này; hãy xử lý trước khi xóa.",
     "Pending expense approvals":
       "Còn expense đang chờ duyệt liên quan đến bạn; hãy xử lý trước khi rời nhóm.",
     "Invalid bank BIN": "Mã ngân hàng không hợp lệ.",
@@ -144,6 +153,21 @@ export async function leaveGroup(
   if (error) return { error };
   revalidatePath("/", "layout");
   redirect("/");
+}
+export async function removeMember(
+  _: OfficeState,
+  f: FormData,
+): Promise<OfficeState> {
+  if (text(f, "confirmRemove") !== "true")
+    return { error: "Hãy xác nhận bạn muốn xóa thành viên này." };
+  const groupId = text(f, "groupId");
+  const { error } = await rpc("remove_group_member", {
+    p_group_id: groupId,
+    p_user_id: text(f, "userId"),
+  });
+  if (error) return { error };
+  revalidatePath(`/groups/${groupId}`);
+  return { success: "Đã xóa thành viên khỏi nhóm." };
 }
 export async function rotateInvite(
   _: OfficeState,

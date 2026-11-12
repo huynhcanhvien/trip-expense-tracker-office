@@ -12,6 +12,7 @@ import { groupData } from "@/lib/office-data";
 import {
   decideJoin,
   leaveGroup,
+  removeMember,
   renameGroup,
   rotateInvite,
 } from "@/lib/office-actions";
@@ -162,6 +163,40 @@ export default async function GroupPage({
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                     {m.user_id === group.owner_id ? t("admin") : t("member")}
                   </span>
+                  {admin && m.user_id !== group.owner_id && (
+                    <details className="-mt-2 basis-full pl-14">
+                      <summary
+                        aria-label={t("removeMemberNamed", {
+                          name: m.profile?.name || t("member"),
+                        })}
+                        className="-ml-2 inline-flex min-h-11 cursor-pointer items-center rounded-lg px-2 text-xs font-semibold text-danger hover:bg-danger-soft"
+                      >
+                        {t("removeMember")}
+                      </summary>
+                      <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                        {t("removeWarning")}
+                      </p>
+                      <ActionForm
+                        action={removeMember}
+                        label={t("confirmRemove")}
+                        className="mt-3 flex min-w-0 flex-col gap-3"
+                      >
+                        <input type="hidden" name="groupId" value={groupId} />
+                        <input type="hidden" name="userId" value={m.user_id} />
+                        <label className="flex min-h-11 items-center gap-3 text-sm">
+                          <input
+                            type="checkbox"
+                            name="confirmRemove"
+                            value="true"
+                            required
+                          />
+                          {t("removeConfirmation", {
+                            name: m.profile?.name || t("member"),
+                          })}
+                        </label>
+                      </ActionForm>
+                    </details>
+                  )}
                 </div>
               ))}
             </div>

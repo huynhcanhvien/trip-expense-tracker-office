@@ -23,6 +23,19 @@ const english: Record<string, string> = {
   "Khoản chi đã bị hủy; kiểm tra đối soát":
     "An expense was cancelled; review reconciliation",
   "Vui lòng đăng nhập để tiếp tục.": "Please sign in to continue.",
+  "Quản trị viên không thể tự xóa mình khỏi nhóm.":
+    "The administrator cannot remove themselves from the group.",
+  "Người này không còn là thành viên nhóm.":
+    "This person is no longer a member of the group.",
+  "Thành viên này còn khoản phải trả chưa được xác nhận trong nhóm; hãy xử lý trước khi xóa.":
+    "This member still has unconfirmed payments in the group; settle them before removing.",
+  "Người khác còn nợ thành viên này trong nhóm; hãy thanh toán và xác nhận trước khi xóa.":
+    "Others still owe this member in the group; settle and confirm before removing.",
+  "Còn expense đang chờ duyệt liên quan đến thành viên này; hãy xử lý trước khi xóa.":
+    "Expenses involving this member still await approval; resolve them before removing.",
+  "Hãy xác nhận bạn muốn xóa thành viên này.":
+    "Confirm that you want to remove this member.",
+  "Đã xóa thành viên khỏi nhóm.": "The member was removed from the group.",
   "Số tài khoản phải là số tài khoản thật (có chữ số), không dùng ký tự che như XXXX.":
     "Enter your real account number (with digits), not a placeholder like XXXX.",
   "Chỉ quản trị viên nhóm được thực hiện thao tác này.":
@@ -244,6 +257,8 @@ export function localizeServerMessage(
   );
   if (decimal)
     return `Enter an amount with at most ${decimal[1]} decimal places; use a decimal point and no thousands separators.`;
+  const removed = message.match(/^Bạn đã bị xóa khỏi nhóm: ([^]+)$/);
+  if (removed) return `You were removed from the group: ${removed[1]}`;
   const size = message.match(/^Hãy chọn ảnh không quá (\d+) MB\.$/);
   if (size) return `Select an image no larger than ${size[1]} MB.`;
   const range = message.match(
