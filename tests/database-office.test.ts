@@ -890,6 +890,88 @@ describe("Supabase office migration: actual PostgreSQL functions and RLS", () =>
     ).toHaveLength(1);
   });
 
+  it("lets only the owner remove a member once nothing is owed, keeping history", async () => {
+    const group = await groupWithMember();
+    const id = await expense(group);
+    await expect(
+      asUser(null, "select remove_group_member($1,$2)", [group, member]),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(
+      rpc(member, "remove_group_member", [group, owner]),
+    ).rejects.toThrow(/owner required/i);
+    await expect(
+      rpc(outsider, "remove_group_member", [group, member]),
+    ).rejects.toThrow(/owner required/i);
+    await expect(
+      rpc(owner, "remove_group_member", [group, owner]),
+    ).rejects.toThrow(/cannot be removed/i);
+    await expect(
+      rpc(owner, "remove_group_member", [group, outsider]),
+    ).rejects.toThrow(/Member not found/i);
+    await expect(
+      rpc(owner, "remove_group_member", [group, member]),
+    ).rejects.toThrow(/outstanding payments/i);
+    await rpc(member, "payment_action", [id, "report", member]);
+    await expect(
+      rpc(owner, "remove_group_member", [group, member]),
+    ).rejects.toThrow(/outstanding payments/i);
+    await rpc(owner, "payment_action", [id, "confirm", member]);
+    const receivable = await rpc<string>(member, "save_expense", [
+      null,
+      group,
+      "Member paid",
+      "200",
+      "2026-10-06",
+      "even",
+      JSON.stringify([{ userId: owner }, { userId: member }]),
+      null,
+    ]);
+    await expect(
+      rpc(owner, "remove_group_member", [group, member]),
+    ).rejects.toThrow(/outstanding receivables/i);
+    await rpc(owner, "payment_action", [receivable, "report", owner]);
+    await expect(
+      rpc(owner, "remove_group_member", [group, member]),
+    ).rejects.toThrow(/outstanding receivables/i);
+    await rpc(member, "payment_action", [receivable, "confirm", owner]);
+
+    await rpc(owner, "remove_group_member", [group, member]);
+    expect(
+      (await asUser(member, "select * from office_groups where id=$1", [group]))
+        .rows,
+    ).toHaveLength(0);
+    expect(
+      (
+        await db.query(
+          "select * from office_shares where expense_id=$1 and user_id=$2",
+          [id, member],
+        )
+      ).rows,
+    ).toHaveLength(1);
+    const notes = await asUser<{ title: string; group_id: string | null }>(
+      member,
+      "select title,group_id from notifications where title like 'Bạn đã bị xóa%'",
+    );
+    expect(notes.rows).toEqual([
+      { title: "Bạn đã bị xóa khỏi nhóm: Kiểm thử", group_id: null },
+    ]);
+    // The removed member can ask to join again.
+    const token = (
+      await db.query<{ invite_token: string }>(
+        "select invite_token from office_groups where id=$1",
+        [group],
+      )
+    ).rows[0].invite_token;
+    await rpc(owner, "decide_join", [
+      await rpc<string>(member, "request_join", [token]),
+      true,
+    ]);
+    expect(
+      (await asUser(member, "select * from office_groups where id=$1", [group]))
+        .rows,
+    ).toHaveLength(1);
+  });
+
   it("requires incoming payments to be confirmed without netting and ignores cancelled, zero and self shares", async () => {
     const group = await groupWithMember();
     const id = await expense(group);

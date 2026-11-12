@@ -540,6 +540,63 @@ test.describe("real Supabase office workflow", () => {
       ).toBeVisible();
       await page.goto(`/groups/${id}`);
       await expect(page.getByText("Rời nhóm", { exact: true })).toHaveCount(0);
+      // The owner removes the member again after they rejoin with an unpaid share.
+      checked(
+        await client.rpc("decide_join", {
+          p_request_id: checked(
+            await memberClient.rpc("request_join", {
+              p_token: group!.invite_token,
+            }),
+          ),
+          p_approve: true,
+        }),
+      );
+      const unpaid = checked(
+        await client.rpc("save_expense", {
+          p_expense_id: null,
+          p_group_id: id,
+          p_description: "Coffee after rejoining",
+          p_amount: "40000",
+          p_expense_date: "2026-10-07",
+          p_split_mode: "even",
+          p_shares: [{ userId: owner.id }, { userId: member.id }],
+          p_receipt_upload_id: null,
+        }),
+      );
+      await page.reload();
+      await page.getByText("Xóa khỏi nhóm", { exact: true }).click();
+      const confirmRemove = page.getByLabel(
+        `Tôi muốn xóa ${member.name} khỏi nhóm`,
+        { exact: true },
+      );
+      await confirmRemove.check();
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      await page
+        .getByRole("button", { name: "Xác nhận xóa", exact: true })
+        .click();
+      await expect(page.getByRole("main").getByRole("alert")).toContainText(
+        "còn khoản phải trả",
+      );
+      checked(
+        await client.rpc("cancel_expense", {
+          p_expense_id: unpaid,
+          p_reason: "Rejoined by mistake",
+        }),
+      );
+      await confirmRemove.check();
+      await page
+        .getByRole("button", { name: "Xác nhận xóa", exact: true })
+        .click();
+      // The member's row, with its form, leaves the list once they are removed.
+      await expect(
+        page.getByText("Xóa khỏi nhóm", { exact: true }),
+      ).toHaveCount(0);
+      await memberPage.goto("/notifications");
+      await expect(
+        memberPage.getByText(`Bạn đã bị xóa khỏi nhóm: ${name}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
       await page.getByText("Xóa nhóm", { exact: true }).click();
       const remove = page.getByRole("button", {
         name: "Xóa nhóm vĩnh viễn",

@@ -26,6 +26,11 @@ describe("localizeServerMessage", () => {
     expect(localizeServerMessage(undefined, "en")).toBe("");
     expect(localizeServerMessage(null, "en")).toBe("");
   });
+  it("translates the removal notice with the group name", () => {
+    expect(
+      localizeServerMessage("Bạn đã bị xóa khỏi nhóm: Team Đà Lạt", "en"),
+    ).toBe("You were removed from the group: Team Đà Lạt");
+  });
   it("translates successes and parametrized errors", () => {
     expect(localizeServerMessage("Đã lưu tài khoản ngân hàng.", "en")).toBe(
       "Bank account saved.",

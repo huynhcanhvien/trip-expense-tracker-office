@@ -142,7 +142,12 @@
     "confirmLeave": "Xác nhận rời nhóm",
     "leaveConfirmation": "Tôi muốn rời nhóm này",
     "groupDetails": "Thành viên và quản lý nhóm",
-    "recurring": "Định kỳ"
+    "recurring": "Định kỳ",
+    "removeMember": "Xóa khỏi nhóm",
+    "removeMemberNamed": "Xóa {name} khỏi nhóm",
+    "removeWarning": "Chỉ xóa được khi thành viên không còn khoản phải trả hay phải thu chưa xác nhận và không có expense chờ duyệt. Lịch sử khoản chi được giữ lại; họ sẽ mất quyền xem nhóm và cần xin tham gia lại nếu muốn quay lại.",
+    "removeConfirmation": "Tôi muốn xóa {name} khỏi nhóm",
+    "confirmRemove": "Xác nhận xóa"
   },
   "newExpense": {
     "createExpense": "Tạo expense",
